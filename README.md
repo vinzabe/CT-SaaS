@@ -1,143 +1,220 @@
-<img src="https://user-images.githubusercontent.com/633843/32198822-e59a0fc4-be1d-11e7-9b92-03ce17ba05ba.png" alt="screenshot"/>
+# Grant's Torrent
 
-**Cloud torrent** is a a self-hosted remote torrent client, written in Go (golang). You start torrents remotely, which are downloaded as sets of files on the local disk of the server, which are then retrievable or streamable via HTTP.
+A modern, secure SaaS platform for converting torrent and magnet links to direct HTTP downloads.
 
-### Features
+Built as a complete rewrite of [jpillora/cloud-torrent](https://github.com/jpillora/cloud-torrent) with modern architecture, full SaaS features, and post-quantum cryptographic security.
 
-* Single binary
-* Cross platform
-* Embedded torrent search
-* Real-time updates
-* Mobile-friendly
-* Fast [content server](http://golang.org/pkg/net/http/#ServeContent)
+## Demo Admin Access
 
-See [Future Features here](#future-features)
+- **Email**: `admin@grants.torrent`
+- **Password**: `admin123`
 
-### Install
+## Features
 
-**Binaries**
+- **Torrent to Direct Link**: Convert any torrent or magnet link to a streamable HTTP download
+- **Post-Quantum Security**: Future-proof encryption using NIST-approved algorithms
+- **User Management**: Full authentication with JWT tokens and refresh token rotation
+- **Subscription Plans**: Free, Starter, Pro, and Unlimited tiers with usage quotas
+- **Admin Panel**: Manage users, view statistics, and monitor the platform
+- **Real-time Updates**: Live progress updates via Server-Sent Events
+- **Streaming Support**: Direct streaming with Range request support
+- **File Management**: Per-file download control and automatic cleanup
 
-[![Releases](https://img.shields.io/github/release/jpillora/cloud-torrent.svg)](https://github.com/jpillora/cloud-torrent/releases) [![Releases](https://img.shields.io/github/downloads/jpillora/cloud-torrent/total.svg)](https://github.com/jpillora/cloud-torrent/releases)
+## Tech Stack
 
-See [the latest release](https://github.com/jpillora/cloud-torrent/releases/latest) or download and install it now with
+### Backend
+- **Language**: Go 1.22
+- **Framework**: Fiber v2
+- **Torrent Engine**: anacrolix/torrent
+- **Database**: PostgreSQL 16
+- **Cache**: Redis 7
+- **Auth**: JWT with Argon2id password hashing
 
-```
-curl https://i.jpillora.com/cloud-torrent! | bash
-```
+### Frontend
+- **Framework**: React 18 with TypeScript
+- **Build Tool**: Vite
+- **Styling**: Tailwind CSS
+- **State Management**: Zustand + TanStack Query
+- **UI Components**: Custom components with Lucide icons
 
-*Tip*: [Auto-run `cloud-torrent` on boot](https://github.com/jpillora/cloud-torrent/wiki/Auto-Run-on-Reboot)
+## Quick Start
 
-**Docker**
+### Prerequisites
+- Go 1.22+
+- Node.js 20+
+- Docker & Docker Compose
+- PostgreSQL 16 (or use Docker)
+- Redis 7 (or use Docker)
 
-[![Docker Pulls](https://img.shields.io/docker/pulls/jpillora/cloud-torrent.svg)][dockerhub]
+### Development Setup
 
-[dockerhub]: https://hub.docker.com/r/jpillora/cloud-torrent/
-
-``` sh
-$ docker run -d -p 3000:3000 -v /path/to/my/downloads:/downloads jpillora/cloud-torrent
-```
-
-**Source**
-
-*[Go](https://golang.org/dl/) is required to install from source*
-
-``` sh
-$ go get -v github.com/jpillora/cloud-torrent
-```
-
-**VPS**
-
-[Digital Ocean](https://m.do.co/c/011fa87fde07)
-
-  1. [Sign up with free $10 credit](https://m.do.co/c/011fa87fde07)
-  2. "Create Droplet"
-  3. "One-Click Apps"
-  4. "Docker X.X.X on X.X"
-  5. Choose server size ("$5/month" is enough)
-  6. Choose server location
-  7. **OPTIONAL** Add your SSH key
-  8. "Create"
-  9. You will be emailed the server details (`IP Address: ..., Username: root, Password: ...`)
-  10. SSH into the server using these details (Windows: [Putty](https://the.earth.li/~sgtatham/putty/latest/x86/putty.exe), Mac: Terminal)
-  11. Follow the prompts to set a new password
-  12. Run `cloud-torrent` with:
-
-    docker run --name ct -d -p 63000:63000 \
-      --restart always \
-      -v /root/downloads:/downloads \
-      jpillora/cloud-torrent --port 63000
-
-  13. Visit `http://<IP Address from email>:63000/`
-  14. **OPTIONAL** In addition to `--port` you can specify the options below
-
-[Vultr](http://www.vultr.com/?ref=6947403-3B)
-
-* [Sign up with free $10 credit here](http://www.vultr.com/?ref=6947403-3B)
-* Follow the DO tutorial above, very similar steps ("Applications" instead of "One-Click Apps")
-* Offers different server locations
-
-[AWS](https://aws.amazon.com)
-
-**Heroku** (Heroku is no longer supported)
-
-### Usage
-
-```
-$ cloud-torrent --help
-
-  Usage: cloud-torrent [options]
-
-  Options:
-  --title, -t        Title of this instance (default Cloud Torrent, env TITLE)
-  --port, -p         Listening port (default 3000, env PORT)
-  --host, -h         Listening interface (default all)
-  --auth, -a         Optional basic auth in form 'user:password' (env AUTH)
-  --config-path, -c  Configuration file path (default cloud-torrent.json)
-  --key-path, -k     TLS Key file path
-  --cert-path, -r    TLS Certicate file path
-  --log, -l          Enable request logging
-  --open, -o         Open now with your default browser
-  --help
-  --version, -v
-
-  Version:
-    0.X.Y
-
-  Read more:
-    https://github.com/jpillora/cloud-torrent
-
+1. **Clone the repository**
+```bash
+git clone https://github.com/yourusername/freetorrent.git
+cd freetorrent
 ```
 
-### Future features
+2. **Start development databases**
+```bash
+make dev-db
+```
 
-The next set of [core features can be tracked here](https://github.com/jpillora/cloud-torrent/issues?q=is%3Aopen+is%3Aissue+label%3Acore-feature). This feature set requires large structural changes and therefore requires a complete rewrite for best results. This rewrite is in progress in the `0.9` branch though it will take quite some time.
+3. **Install dependencies**
+```bash
+make install
+```
 
-In summary, the core features will be:
+4. **Configure environment**
+```bash
+cp backend/.env.example backend/.env
+# Edit backend/.env with your settings
+```
 
-* **Remote backends**
+5. **Run the backend**
+```bash
+make dev-backend
+```
 
-  It's looking like `0.9` will be more of a general purpose cloud transfer engine. It will be capable of transfering files from and source file-system to any destination file-system. A torrent can be viewed a folder with files, just like your local disk, and Dropbox. As long as it has a concept of files and folders, it could potentially be a cloud-torrent file-system backend. Track this issue https://github.com/jpillora/cloud-torrent/issues/24 for the list of proposed backends.
+6. **Run the frontend** (in a new terminal)
+```bash
+make dev-frontend
+```
 
-* **File Transforms**
+7. **Access the application**
+- Frontend: http://localhost:7843
+- Backend API: http://localhost:7842
 
-  During a file tranfer, one could apply different transforms against the byte stream for various effect. For example, supported transforms might include: video transcoding (using ffmpeg), encryption and decryption, [media sorting](https://github.com/jpillora/cloud-torrent/issues/4) (file renaming), and writing multiple files as a single zip file.
-  
-* **Automatic updates** Binary will upgrade itself, adding new features as they get released.
-  
-* **RSS** Automatically add torrents, with smart episode filter.
+### Production Deployment
 
-Once completed, cloud-torrent will no longer be a simple torrent client and most likely project be renamed.
+Using Docker Compose:
 
-#### Donate
+```bash
+# Set production environment variables
+export JWT_SECRET="your-secure-secret-key"
 
-If you'd like to buy me a coffee or more, you can donate via [PayPal](https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=dev%40jpillora%2ecom&lc=AU&item_name=Open%20Source%20Donation&button_subtype=services&currency_code=USD&bn=PP%2dBuyNowBF%3abtn_buynowCC_LG%2egif%3aNonHosted) or BitCoin `1AxEWoz121JSC3rV8e9MkaN9GAc5Jxvs4`.
+# Build and start
+docker-compose up -d
+```
 
-### Notes
+The application will be available at http://localhost
 
-This project is the rewrite of the original [Node version](https://github.com/jpillora/node-torrent-cloud).
+## API Endpoints
 
-![overview](https://docs.google.com/drawings/d/1ekyeGiehwQRyi6YfFA4_tQaaEpUaS8qihwJ-s3FT_VU/pub?w=606&h=305)
+### Authentication
+- `POST /api/v1/auth/register` - Create account
+- `POST /api/v1/auth/login` - Login
+- `POST /api/v1/auth/refresh` - Refresh token
+- `POST /api/v1/auth/logout` - Logout
+- `GET /api/v1/auth/me` - Get current user
 
-Credits to @anacrolix for https://github.com/anacrolix/torrent
+### Torrents
+- `POST /api/v1/torrents` - Add torrent (magnet or URL)
+- `POST /api/v1/torrents/upload` - Upload .torrent file
+- `GET /api/v1/torrents` - List torrents
+- `GET /api/v1/torrents/:id` - Get torrent details
+- `DELETE /api/v1/torrents/:id` - Delete torrent
+- `POST /api/v1/torrents/:id/pause` - Pause download
+- `POST /api/v1/torrents/:id/resume` - Resume download
+- `POST /api/v1/torrents/:id/token` - Generate download token
 
-Copyright (c) 2017 Jaime Pillora
+### Downloads
+- `GET /api/v1/download/:token` - Download file (public)
+
+### Admin
+- `GET /api/v1/admin/users` - List users
+- `GET /api/v1/admin/users/:id` - Get user details
+- `PATCH /api/v1/admin/users/:id` - Update user
+- `DELETE /api/v1/admin/users/:id` - Delete user
+- `GET /api/v1/admin/torrents` - List all torrents
+- `DELETE /api/v1/admin/torrents/:id` - Delete torrent
+- `GET /api/v1/admin/stats` - Platform statistics
+- `POST /api/v1/admin/cleanup` - Cleanup expired torrents
+
+### Real-time
+- `GET /api/v1/events` - SSE stream for torrent updates
+
+## Subscription Plans
+
+| Plan | Price | Bandwidth | Concurrent | Retention |
+|------|-------|-----------|------------|-----------|
+| Free | $0/mo | 2 GB/mo | 1 | 24 hours |
+| Starter | $5/mo | 50 GB/mo | 3 | 7 days |
+| Pro | $15/mo | 500 GB/mo | 10 | 30 days |
+| Unlimited | $30/mo | Unlimited | 25 | 90 days |
+
+## Security Features
+
+- **Argon2id**: OWASP-recommended password hashing
+- **JWT with Rotation**: Short-lived access tokens with refresh token rotation
+- **Rate Limiting**: Per-user and per-IP rate limiting
+- **Path Traversal Protection**: Secure file serving
+- **CORS Configuration**: Configurable allowed origins
+- **Security Headers**: X-Frame-Options, CSP, XSS protection
+
+## Configuration
+
+### Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `PORT` | Server port | `8080` |
+| `ENVIRONMENT` | `development` or `production` | `development` |
+| `DATABASE_URL` | PostgreSQL connection string | - |
+| `REDIS_URL` | Redis connection string | - |
+| `JWT_SECRET` | JWT signing secret | - |
+| `JWT_ACCESS_EXPIRY` | Access token expiry (minutes) | `15` |
+| `JWT_REFRESH_EXPIRY` | Refresh token expiry (days) | `7` |
+| `DOWNLOAD_DIR` | Torrent download directory | `./downloads` |
+| `MAX_CONCURRENT` | Max concurrent torrents per user | `10` |
+| `TORRENT_PORT` | BitTorrent listen port | `42069` |
+
+## Project Structure
+
+```
+freetorrent/
+├── backend/
+│   ├── cmd/server/         # Application entry point
+│   ├── internal/
+│   │   ├── auth/           # Authentication logic
+│   │   ├── config/         # Configuration
+│   │   ├── database/       # Database layer
+│   │   ├── handlers/       # HTTP handlers
+│   │   ├── middleware/     # HTTP middleware
+│   │   ├── models/         # Data models
+│   │   └── torrent/        # Torrent engine
+│   └── go.mod
+├── frontend/
+│   ├── src/
+│   │   ├── components/     # React components
+│   │   ├── hooks/          # Custom hooks
+│   │   ├── lib/            # Utilities and API
+│   │   ├── pages/          # Page components
+│   │   └── types/          # TypeScript types
+│   └── package.json
+├── docker/
+│   ├── Dockerfile.backend
+│   ├── Dockerfile.frontend
+│   └── nginx.conf
+├── docker-compose.yml
+├── docker-compose.dev.yml
+└── Makefile
+```
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## License
+
+This project is licensed under the AGPL-3.0 License - see the LICENSE file for details.
+
+## Acknowledgments
+
+- [anacrolix/torrent](https://github.com/anacrolix/torrent) - Excellent Go torrent library
+- [jpillora/cloud-torrent](https://github.com/jpillora/cloud-torrent) - Original inspiration
+- [Fiber](https://gofiber.io/) - Fast Go web framework
+- [Tailwind CSS](https://tailwindcss.com/) - Utility-first CSS framework

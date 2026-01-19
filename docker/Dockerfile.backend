@@ -1,0 +1,53 @@
+# Build stage
+FROM golang:1.22-alpine AS builder
+
+WORKDIR /app
+
+# Install build dependencies
+RUN apk add --no-cache git ca-certificates
+
+# Copy source code first (needed for go mod tidy to know all imports)
+COPY backend/ ./
+
+# Download dependencies - go mod tidy will create/update go.sum
+RUN go mod tidy && go mod download
+
+# Build the binary
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+    -ldflags="-s -w" \
+    -o /app/server ./cmd/server
+
+# Runtime stage
+FROM alpine:3.19
+
+WORKDIR /app
+
+# Install runtime dependencies
+RUN apk add --no-cache ca-certificates tzdata
+
+# Create non-root user
+RUN addgroup -S grantstorrent && adduser -S grantstorrent -G grantstorrent
+
+# Copy binary from builder
+COPY --from=builder /app/server /app/server
+
+# Create downloads directory
+RUN mkdir -p /downloads && chown grantstorrent:grantstorrent /downloads
+
+# Switch to non-root user
+USER grantstorrent
+
+# Expose ports (7842 = API, 42069 = BitTorrent)
+EXPOSE 7842 42069/tcp 42069/udp
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD wget -q --spider http://localhost:7842/health || exit 1
+
+# Set default environment variables
+ENV PORT=7842 \
+    ENVIRONMENT=production \
+    DOWNLOAD_DIR=/downloads \
+    TORRENT_PORT=42069
+
+ENTRYPOINT ["/app/server"]

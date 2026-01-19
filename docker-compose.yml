@@ -1,0 +1,85 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+    container_name: grants-torrent-api
+    restart: unless-stopped
+    environment:
+      - PORT=7842
+      - ENVIRONMENT=production
+      - DATABASE_URL=postgres://grantstorrent:grantstorrent@postgres:5432/grantstorrent?sslmode=disable
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=${JWT_SECRET:-change-this-in-production-use-random-64-chars}
+      - DOWNLOAD_DIR=/downloads
+      - TORRENT_PORT=42069
+    volumes:
+      - downloads:/downloads
+    ports:
+      - "7842:7842"
+      - "42069:42069/tcp"
+      - "42069:42069/udp"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - grants-torrent
+
+  web:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.frontend
+    container_name: grants-torrent-web
+    restart: unless-stopped
+    ports:
+      - "7843:7843"
+    depends_on:
+      - api
+    networks:
+      - grants-torrent
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: grants-torrent-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=grantstorrent
+      - POSTGRES_PASSWORD=grantstorrent
+      - POSTGRES_DB=grantstorrent
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U grantstorrent"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - grants-torrent
+
+  redis:
+    image: redis:7-alpine
+    container_name: grants-torrent-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - grants-torrent
+
+volumes:
+  downloads:
+  postgres_data:
+  redis_data:
+
+networks:
+  grants-torrent:
+    driver: bridge
