@@ -1,17 +1,20 @@
-import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { Plus, RefreshCw, Search, Download, Zap, HardDrive } from 'lucide-react'
+import { useState, useCallback, useMemo } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { Plus, RefreshCw, Search, Download, Zap, HardDrive, Wifi, WifiOff } from 'lucide-react'
 import { Layout } from '../components/Layout'
 import { TorrentCard } from '../components/TorrentCard'
 import { AddTorrentModal } from '../components/AddTorrentModal'
 import { torrentsApi, authApi } from '../lib/api'
 import { useAuthStore } from '../lib/store'
 import { formatBytes } from '../lib/utils'
+import { useSSE, TransformedTorrentUpdate } from '../hooks/useSSE'
+import type { Torrent } from '../types'
 
 export function DashboardPage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const { setUser } = useAuthStore()
+  const queryClient = useQueryClient()
 
   useQuery({
     queryKey: ['me'],
@@ -23,26 +26,69 @@ export function DashboardPage() {
     refetchInterval: 30000, // Refresh every 30 seconds
   })
 
+  // Initial load and fallback polling (reduced frequency when SSE is connected)
   const { data: torrentsData, isLoading, refetch } = useQuery({
     queryKey: ['torrents'],
     queryFn: () => torrentsApi.list(1, 50),
-    refetchInterval: 3000, // Poll every 3 seconds for live updates
+    refetchInterval: 30000, // Reduced to 30s since SSE handles real-time updates
+  })
+
+  // Handle SSE updates by merging with existing data
+  const handleSSEUpdate = useCallback((sseUpdates: TransformedTorrentUpdate[]) => {
+    queryClient.setQueryData(['torrents'], (oldData: { torrents: Torrent[] } | undefined) => {
+      if (!oldData) return oldData
+
+      const updatedTorrents = oldData.torrents.map((torrent) => {
+        const update = sseUpdates.find((u) => u.id === torrent.id || u.info_hash === torrent.info_hash)
+        if (update) {
+          return {
+            ...torrent,
+            status: update.status,
+            progress: update.progress,
+            downloaded_size: update.downloaded_size,
+            uploaded_size: update.uploaded_size,
+            download_speed: update.download_speed,
+            upload_speed: update.upload_speed,
+            peers: update.peers,
+            seeds: update.seeds,
+            name: update.name || torrent.name,
+            total_size: update.total_size || torrent.total_size,
+            files: update.files || torrent.files,
+            error_message: update.error_message,
+          }
+        }
+        return torrent
+      })
+
+      return { ...oldData, torrents: updatedTorrents }
+    })
+  }, [queryClient])
+
+  // SSE connection for real-time updates
+  const { status: sseStatus, isConnected } = useSSE({
+    onTorrentsUpdate: handleSSEUpdate,
+    enabled: true,
   })
 
   const torrents = torrentsData?.torrents || []
-  const filteredTorrents = torrents.filter((t) =>
-    t.name?.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredTorrents = useMemo(() => 
+    torrents.filter((t) =>
+      t.name?.toLowerCase().includes(searchQuery.toLowerCase())
+    ),
+    [torrents, searchQuery]
   )
 
   // Stats calculations
-  const activeTorrents = torrents.filter((t) => 
-    t.status === 'downloading' || t.status === 'pending'
-  ).length
-  const completedTorrents = torrents.filter((t) => 
-    t.status === 'completed' || t.status === 'seeding'
-  ).length
-  const totalDownloadSpeed = torrents.reduce((acc, t) => acc + (t.download_speed || 0), 0)
-  const totalSize = torrents.reduce((acc, t) => acc + (t.total_size || 0), 0)
+  const stats = useMemo(() => ({
+    activeTorrents: torrents.filter((t) => 
+      t.status === 'downloading' || t.status === 'pending'
+    ).length,
+    completedTorrents: torrents.filter((t) => 
+      t.status === 'completed' || t.status === 'seeding'
+    ).length,
+    totalDownloadSpeed: torrents.reduce((acc, t) => acc + (t.download_speed || 0), 0),
+    totalSize: torrents.reduce((acc, t) => acc + (t.total_size || 0), 0),
+  }), [torrents])
 
   return (
     <Layout>
@@ -51,7 +97,32 @@ export function DashboardPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-            <p className="text-gray-500">Manage your torrent downloads</p>
+            <div className="flex items-center gap-2">
+              <p className="text-gray-500">Manage your torrent downloads</p>
+              {/* SSE Connection Status */}
+              <span 
+                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                  isConnected 
+                    ? 'bg-green-100 text-green-700' 
+                    : sseStatus === 'connecting'
+                    ? 'bg-yellow-100 text-yellow-700'
+                    : 'bg-gray-100 text-gray-600'
+                }`}
+                title={isConnected ? 'Live updates active' : `Status: ${sseStatus}`}
+              >
+                {isConnected ? (
+                  <>
+                    <Wifi className="w-3 h-3" />
+                    Live
+                  </>
+                ) : (
+                  <>
+                    <WifiOff className="w-3 h-3" />
+                    {sseStatus === 'connecting' ? 'Connecting...' : 'Offline'}
+                  </>
+                )}
+              </span>
+            </div>
           </div>
           <button
             onClick={() => setIsAddModalOpen(true)}
@@ -71,7 +142,7 @@ export function DashboardPage() {
               </div>
               <div>
                 <p className="text-sm text-gray-500">Active</p>
-                <p className="text-xl font-semibold text-gray-900">{activeTorrents}</p>
+                <p className="text-xl font-semibold text-gray-900">{stats.activeTorrents}</p>
               </div>
             </div>
           </div>
@@ -84,7 +155,7 @@ export function DashboardPage() {
               <div>
                 <p className="text-sm text-gray-500">Speed</p>
                 <p className="text-xl font-semibold text-gray-900">
-                  {formatBytes(totalDownloadSpeed)}/s
+                  {formatBytes(stats.totalDownloadSpeed)}/s
                 </p>
               </div>
             </div>
@@ -98,7 +169,7 @@ export function DashboardPage() {
               <div>
                 <p className="text-sm text-gray-500">Total Size</p>
                 <p className="text-xl font-semibold text-gray-900">
-                  {formatBytes(totalSize)}
+                  {formatBytes(stats.totalSize)}
                 </p>
               </div>
             </div>
@@ -111,7 +182,7 @@ export function DashboardPage() {
               </div>
               <div>
                 <p className="text-sm text-gray-500">Completed</p>
-                <p className="text-xl font-semibold text-gray-900">{completedTorrents}</p>
+                <p className="text-xl font-semibold text-gray-900">{stats.completedTorrents}</p>
               </div>
             </div>
           </div>

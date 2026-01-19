@@ -64,7 +64,7 @@ func main() {
 	authHandler := handlers.NewAuthHandler(db, authService, cfg)
 	torrentHandler := handlers.NewTorrentHandler(db, engine)
 	adminHandler := handlers.NewAdminHandler(db, engine)
-	sseHandler := handlers.NewSSEHandler(engine)
+	sseHandler := handlers.NewSSEHandler(engine, authService)
 	billingHandler := handlers.NewBillingHandler(db, cfg)
 
 	// Initialize rate limiter (100 requests per minute)

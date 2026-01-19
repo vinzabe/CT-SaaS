@@ -4,27 +4,70 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
+	"github.com/freetorrent/freetorrent/internal/auth"
 	"github.com/freetorrent/freetorrent/internal/middleware"
 	"github.com/freetorrent/freetorrent/internal/torrent"
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 	"github.com/valyala/fasthttp"
 )
 
 type SSEHandler struct {
-	engine *torrent.Engine
+	engine      *torrent.Engine
+	authService *auth.AuthService
 }
 
-func NewSSEHandler(engine *torrent.Engine) *SSEHandler {
+func NewSSEHandler(engine *torrent.Engine, authService *auth.AuthService) *SSEHandler {
 	return &SSEHandler{
-		engine: engine,
+		engine:      engine,
+		authService: authService,
 	}
+}
+
+// getSSEUserID extracts user ID from either Authorization header or token query param
+// This allows SSE to work with both standard auth middleware and browser EventSource
+func (h *SSEHandler) getSSEUserID(c *fiber.Ctx) (uuid.UUID, string, error) {
+	// First try standard middleware (Authorization header)
+	userID, err := middleware.GetUserID(c)
+	if err == nil {
+		role := middleware.GetUserRole(c)
+		return userID, role, nil
+	}
+
+	// Fall back to token query parameter for EventSource compatibility
+	token := c.Query("token")
+	if token == "" {
+		// Also check Authorization header directly (in case middleware didn't run)
+		authHeader := c.Get("Authorization")
+		if strings.HasPrefix(authHeader, "Bearer ") {
+			token = strings.TrimPrefix(authHeader, "Bearer ")
+		}
+	}
+
+	if token == "" {
+		return uuid.Nil, "", fmt.Errorf("no authentication token")
+	}
+
+	// Validate the token
+	claims, err := h.authService.ValidateAccessToken(token)
+	if err != nil {
+		return uuid.Nil, "", fmt.Errorf("invalid token: %w", err)
+	}
+
+	uid, err := uuid.Parse(claims.UserID)
+	if err != nil {
+		return uuid.Nil, "", fmt.Errorf("invalid user ID in token")
+	}
+
+	return uid, claims.Role, nil
 }
 
 // Events streams real-time torrent updates via Server-Sent Events
 func (h *SSEHandler) Events(c *fiber.Ctx) error {
-	userID, err := middleware.GetUserID(c)
+	userID, _, err := h.getSSEUserID(c)
 	if err != nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 			"error": "unauthorized",
@@ -86,7 +129,12 @@ func (h *SSEHandler) Events(c *fiber.Ctx) error {
 
 // EventsAll streams all torrent updates (admin only)
 func (h *SSEHandler) EventsAll(c *fiber.Ctx) error {
-	role := middleware.GetUserRole(c)
+	_, role, err := h.getSSEUserID(c)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "unauthorized",
+		})
+	}
 	if role != "admin" {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
 			"error": "admin access required",

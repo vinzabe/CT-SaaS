@@ -77,8 +77,11 @@ else
         echo "======================================"
         echo "  Grant's Torrent is running!"
         echo ""
-        echo "  Frontend: http://localhost:7843"
-        echo "  API:      http://localhost:7842"
+        echo "  Frontend (HTTPS): https://localhost:7843"
+        echo "  Frontend (HTTPS): https://localhost:7844"
+        echo "  API:              http://localhost:7842"
+        echo ""
+        echo "  Note: Using self-signed SSL certificates"
         echo "======================================"
     else
         echo ""

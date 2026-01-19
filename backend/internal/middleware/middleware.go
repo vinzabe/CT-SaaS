@@ -20,23 +20,31 @@ const (
 )
 
 // AuthMiddleware validates JWT tokens
+// Supports both Authorization header and query parameter (for SSE compatibility)
 func AuthMiddleware(authService *auth.AuthService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		var token string
+
+		// Try Authorization header first
 		authHeader := c.Get("Authorization")
-		if authHeader == "" {
+		if authHeader != "" {
+			parts := strings.Split(authHeader, " ")
+			if len(parts) == 2 && strings.ToLower(parts[0]) == "bearer" {
+				token = parts[1]
+			}
+		}
+
+		// Fall back to query parameter (for SSE/EventSource compatibility)
+		if token == "" {
+			token = c.Query("token")
+		}
+
+		if token == "" {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 				"error": "missing authorization header",
 			})
 		}
 
-		parts := strings.Split(authHeader, " ")
-		if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-				"error": "invalid authorization header format",
-			})
-		}
-
-		token := parts[1]
 		claims, err := authService.ValidateAccessToken(token)
 		if err != nil {
 			if err == auth.ErrExpiredToken {

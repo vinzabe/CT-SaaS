@@ -40,8 +40,8 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 # Expose HTTP and HTTPS ports
 EXPOSE 7843 7844
 
-# Health check
+# Health check (using --no-check-certificate for self-signed certs)
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD wget -q --spider http://localhost:7843 || exit 1
+    CMD wget -q --no-check-certificate --spider https://localhost:7843/health || exit 1
 
 CMD ["nginx", "-g", "daemon off;"]

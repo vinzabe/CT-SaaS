@@ -17,10 +17,11 @@ make down
 ./stop.sh clean
 ```
 
-**Access:**
-- HTTP: http://localhost:7843
-- HTTPS: https://localhost:7844
+**Access (HTTPS enabled by default):**
+- Frontend: https://localhost:7843 or https://localhost:7844
 - API: http://localhost:7842
+
+> Note: Self-signed SSL certificates are generated automatically. Your browser will show a security warning - this is normal for self-signed certs.
 
 ## Demo Accounts
 
@@ -35,7 +36,7 @@ The demo account is perfect for testing - downloads are automatically deleted af
 
 - **Torrent to Direct Link**: Convert any torrent or magnet link to a streamable HTTP download
 - **Auto-ZIP**: Multi-file torrents are automatically zipped for easy download
-- **SSL/HTTPS Support**: Built-in HTTPS support for secure connections
+- **SSL/HTTPS Always On**: Both frontend ports use HTTPS with TLS 1.2/1.3
 - **Post-Quantum Security**: Future-proof encryption using NIST-approved ML-DSA-65 algorithms
 - **User Management**: Full authentication with JWT tokens and refresh token rotation
 - **Subscription Plans**: Free, Starter, Pro, and Unlimited tiers with usage quotas
@@ -65,23 +66,25 @@ The demo account is perfect for testing - downloads are automatically deleted af
 
 | Service | Port | Protocol | Description |
 |---------|------|----------|-------------|
-| Frontend (HTTP) | 7843 | HTTP | Web UI |
-| Frontend (HTTPS) | 7844 | HTTPS | Web UI (SSL) |
-| Backend API | 7842 | HTTP | REST API |
+| Frontend | 7843 | **HTTPS** | Web UI (SSL) |
+| Frontend | 7844 | **HTTPS** | Web UI (SSL) - Alternative |
+| Backend API | 7842 | HTTP | REST API (internal) |
 | BitTorrent | 42069 | TCP/UDP | Torrent protocol |
 
-## SSL/HTTPS Support
+**Both frontend ports (7843 and 7844) use HTTPS/SSL by default.**
 
-Grant's Torrent includes built-in SSL support on port **7844**.
+## SSL/HTTPS Configuration
+
+Grant's Torrent has SSL enabled by default on both frontend ports.
 
 ### Self-Signed Certificates (Default)
-By default, self-signed certificates are generated automatically. These work for:
+Self-signed certificates are generated automatically during container build. These work for:
 - Local development
 - Cloudflare tunnels (with "No TLS Verify" option)
 - Internal networks
 
 ### Custom Certificates
-To use your own SSL certificates:
+To use your own SSL certificates (e.g., from Let's Encrypt):
 
 1. Create a `certs` directory:
 ```bash
@@ -94,7 +97,7 @@ cp your-certificate.crt certs/server.crt
 cp your-private-key.key certs/server.key
 ```
 
-3. Mount the volume in `docker-compose.yml`:
+3. Add volume mount to `docker-compose.yml`:
 ```yaml
 web:
   volumes:
@@ -108,26 +111,20 @@ make down && make up
 
 ## Cloudflare Tunnel Setup
 
-Grant's Torrent works great with Cloudflare Tunnels for secure public access.
+Grant's Torrent is designed to work with Cloudflare Tunnels for secure public access.
 
-### Option 1: HTTP Origin (Simplest)
-Cloudflare handles SSL termination:
-
-```bash
-cloudflared tunnel --url http://localhost:7843
-```
-
-### Option 2: HTTPS Origin (End-to-End Encryption)
-For full end-to-end encryption:
+### Recommended: HTTPS Origin
+For end-to-end encryption with Cloudflare tunnel:
 
 ```bash
+# Quick tunnel (temporary)
 cloudflared tunnel --url https://localhost:7844 --no-tls-verify
+
+# Or use port 7843
+cloudflared tunnel --url https://localhost:7843 --no-tls-verify
 ```
 
-Or with proper certificates (no `--no-tls-verify` needed):
-```bash
-cloudflared tunnel --url https://localhost:7844
-```
+The `--no-tls-verify` flag is needed for self-signed certificates.
 
 ### Persistent Tunnel Configuration
 
@@ -159,11 +156,21 @@ cloudflared tunnel route dns grants-torrent torrent.yourdomain.com
 cloudflared tunnel run grants-torrent
 ```
 
+### With Custom Certificates
+If using real certificates (not self-signed), remove `noTLSVerify`:
+
+```yaml
+ingress:
+  - hostname: torrent.yourdomain.com
+    service: https://localhost:7844
+  - service: http_status:404
+```
+
 ## Docker Containers
 
 | Container | Image | Purpose |
 |-----------|-------|---------|
-| `grants-torrent-web` | nginx:alpine | Frontend server (HTTP + HTTPS) |
+| `grants-torrent-web` | nginx:alpine | Frontend server (HTTPS) |
 | `grants-torrent-api` | custom | Go backend |
 | `grants-torrent-postgres` | postgres:16-alpine | Database |
 | `grants-torrent-redis` | redis:7-alpine | Cache |
@@ -202,7 +209,7 @@ make dev-frontend
 ```
 
 Development URLs:
-- Frontend: http://localhost:7843
+- Frontend: http://localhost:5173 (Vite dev server)
 - Backend API: http://localhost:7842
 
 ## API Endpoints
@@ -248,11 +255,12 @@ Development URLs:
 
 ## Security Features
 
+- **SSL/TLS Always On**: HTTPS enabled on all frontend ports
+- **TLS 1.2/1.3**: Modern SSL configuration with secure ciphers
+- **HSTS**: HTTP Strict Transport Security enabled
 - **Argon2id**: OWASP-recommended password hashing
 - **JWT with Rotation**: Short-lived access tokens (15 min) with refresh token rotation
 - **Post-Quantum Cryptography**: ML-DSA-65 signatures for API security
-- **TLS 1.2/1.3**: Modern SSL configuration with secure ciphers
-- **HSTS**: HTTP Strict Transport Security enabled on HTTPS
 - **Rate Limiting**: Per-user and per-IP rate limiting
 - **Path Traversal Protection**: Secure file serving
 - **Token-based Downloads**: Secure, expiring download links
@@ -319,6 +327,9 @@ grants-torrent/
 
 ## Troubleshooting
 
+### Browser shows "Not Secure" warning
+This is normal with self-signed certificates. Click "Advanced" and "Proceed" to continue. For production, use real certificates.
+
 ### Containers won't start
 ```bash
 # Full cleanup and restart
@@ -334,10 +345,9 @@ lsof -i :7843
 lsof -i :7844
 ```
 
-### SSL Certificate Issues
-If you get SSL errors with Cloudflare tunnel:
+### Cloudflare tunnel 502 error
+Make sure to use `--no-tls-verify` with self-signed certificates:
 ```bash
-# Use --no-tls-verify for self-signed certs
 cloudflared tunnel --url https://localhost:7844 --no-tls-verify
 ```
 
