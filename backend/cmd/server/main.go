@@ -30,7 +30,7 @@ func main() {
 	// Load configuration
 	cfg := config.Load()
 
-	log.Printf("Starting Grant's Torrent server...")
+	log.Printf("Starting CT-SaaS server...")
 	log.Printf("Environment: %s", cfg.Environment)
 
 	// Initialize database
@@ -72,8 +72,8 @@ func main() {
 
 	// Create Fiber app
 	app := fiber.New(fiber.Config{
-		AppName:               "Grant's Torrent",
-		ServerHeader:          "GrantsTorrent",
+		AppName:               "CT-SaaS",
+		ServerHeader:          "CT-SaaS",
 		DisableStartupMessage: cfg.Environment == "production",
 		ReadTimeout:           30 * time.Second,
 		WriteTimeout:          30 * time.Second,
@@ -100,7 +100,7 @@ func main() {
 	app.Get("/health", func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{
 			"status":  "healthy",
-			"service": "grants-torrent",
+			"service": "ct-saas",
 			"time":    time.Now().Format(time.RFC3339),
 		})
 	})
@@ -268,7 +268,7 @@ func createDemoAdmin(db *database.Database, authService *auth.AuthService) {
 	ctx := context.Background()
 	
 	// Create admin account
-	admin, err := db.GetUserByEmail(ctx, "admin@grants.torrent")
+	admin, err := db.GetUserByEmail(ctx, "admin@ct.saas")
 	if err != nil {
 		log.Printf("Error checking for admin user: %v", err)
 	} else if admin == nil {
@@ -276,14 +276,14 @@ func createDemoAdmin(db *database.Database, authService *auth.AuthService) {
 		if err != nil {
 			log.Printf("Failed to hash admin password: %v", err)
 		} else {
-			user, err := db.CreateUser(ctx, "admin@grants.torrent", passwordHash)
+			user, err := db.CreateUser(ctx, "admin@ct.saas", passwordHash)
 			if err != nil {
 				log.Printf("Failed to create admin user: %v", err)
 			} else {
 				if err := db.UpdateUserRole(ctx, user.ID, "admin"); err != nil {
 					log.Printf("Failed to set admin role: %v", err)
 				} else {
-					log.Println("Demo admin created: admin@grants.torrent / admin123")
+					log.Println("Demo admin created: admin@ct.saas / admin123")
 				}
 			}
 		}
@@ -292,7 +292,7 @@ func createDemoAdmin(db *database.Database, authService *auth.AuthService) {
 	}
 	
 	// Create demo account (restricted - can't change password, 24hr retention)
-	demo, err := db.GetUserByEmail(ctx, "demo@grants.torrent")
+	demo, err := db.GetUserByEmail(ctx, "demo@ct.saas")
 	if err != nil {
 		log.Printf("Error checking for demo user: %v", err)
 	} else if demo == nil {
@@ -300,7 +300,7 @@ func createDemoAdmin(db *database.Database, authService *auth.AuthService) {
 		if err != nil {
 			log.Printf("Failed to hash demo password: %v", err)
 		} else {
-			user, err := db.CreateUser(ctx, "demo@grants.torrent", passwordHash)
+			user, err := db.CreateUser(ctx, "demo@ct.saas", passwordHash)
 			if err != nil {
 				log.Printf("Failed to create demo user: %v", err)
 			} else {
@@ -308,7 +308,7 @@ func createDemoAdmin(db *database.Database, authService *auth.AuthService) {
 				if err := db.UpdateUserRole(ctx, user.ID, "demo"); err != nil {
 					log.Printf("Failed to set demo role: %v", err)
 				} else {
-					log.Println("Demo user created: demo@grants.torrent / demo123")
+					log.Println("Demo user created: demo@ct.saas / demo123")
 				}
 			}
 		}

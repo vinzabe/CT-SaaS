@@ -5,7 +5,7 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.backend
-    container_name: grants-torrent-api
+    container_name: ct-saas-api
     restart: unless-stopped
     environment:
       - PORT=7842
@@ -27,13 +27,13 @@ services:
       redis:
         condition: service_healthy
     networks:
-      - grants-torrent
+      - ct-saas
 
   web:
     build:
       context: .
       dockerfile: docker/Dockerfile.frontend
-    container_name: grants-torrent-web
+    container_name: ct-saas-web
     restart: unless-stopped
     ports:
       - "7843:7843"
@@ -41,11 +41,11 @@ services:
     depends_on:
       - api
     networks:
-      - grants-torrent
+      - ct-saas
 
   postgres:
     image: postgres:16-alpine
-    container_name: grants-torrent-postgres
+    container_name: ct-saas-postgres
     restart: unless-stopped
     environment:
       - POSTGRES_USER=grantstorrent
@@ -59,11 +59,11 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - grants-torrent
+      - ct-saas
 
   redis:
     image: redis:7-alpine
-    container_name: grants-torrent-redis
+    container_name: ct-saas-redis
     restart: unless-stopped
     command: redis-server --appendonly yes
     volumes:
@@ -74,7 +74,7 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - grants-torrent
+      - ct-saas
 
 volumes:
   downloads:
@@ -82,5 +82,5 @@ volumes:
   redis_data:
 
 networks:
-  grants-torrent:
+  ct-saas:
     driver: bridge

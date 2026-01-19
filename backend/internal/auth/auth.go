@@ -140,7 +140,7 @@ func (a *AuthService) GenerateAccessToken(userID uuid.UUID, email, role string) 
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Duration(a.cfg.JWTAccessExpiry) * time.Minute)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			NotBefore: jwt.NewNumericDate(time.Now()),
-			Issuer:    "grants-torrent",
+			Issuer:    "ct-saas",
 			Subject:   userID.String(),
 		},
 	}

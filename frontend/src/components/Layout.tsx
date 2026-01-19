@@ -67,7 +67,7 @@ export function Layout({ children }: LayoutProps) {
           <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200">
             <Link to="/dashboard" className="flex items-center gap-2">
               <Cloud className="w-8 h-8 text-primary-600" />
-              <span className="text-xl font-bold text-gray-900">Grant's Torrent</span>
+              <span className="text-xl font-bold text-gray-900">CT-SaaS</span>
             </Link>
             <button
               className="lg:hidden p-2 rounded-lg hover:bg-gray-100"
@@ -181,7 +181,7 @@ export function Layout({ children }: LayoutProps) {
             </button>
             <Link to="/dashboard" className="flex items-center gap-2">
               <Cloud className="w-6 h-6 text-primary-600" />
-              <span className="font-bold text-gray-900">Grant's Torrent</span>
+              <span className="font-bold text-gray-900">CT-SaaS</span>
             </Link>
             <div className="w-10" />
           </div>

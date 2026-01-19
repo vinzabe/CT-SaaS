@@ -48,7 +48,7 @@ export const useAuthStore = create<AuthState>()(
       }),
     }),
     {
-      name: 'grants-torrent-auth',
+      name: 'ct-saas-auth',
       partialize: (state) => ({
         accessToken: state.accessToken,
         refreshToken: state.refreshToken,

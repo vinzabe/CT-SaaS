@@ -5,7 +5,7 @@ BACKEND_DIR := backend
 FRONTEND_DIR := frontend
 
 help: ## Show this help message
-	@echo "Grant's Torrent - Development Commands"
+	@echo "CT-SaaS - Development Commands"
 	@echo ""
 	@echo "ONE-LINERS:"
 	@echo "  make up      - Start everything (production)"
@@ -15,10 +15,10 @@ help: ## Show this help message
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
 # === ONE-LINERS ===
-up: ## Start Grant's Torrent (production mode)
+up: ## Start CT-SaaS (production mode)
 	@./start.sh prod
 
-down: ## Stop Grant's Torrent
+down: ## Stop CT-SaaS
 	@./stop.sh all
 
 start: up ## Alias for 'up'
@@ -53,7 +53,7 @@ install: ## Install all dependencies
 build: build-backend build-frontend ## Build both backend and frontend
 
 build-backend: ## Build backend binary
-	cd $(BACKEND_DIR) && CGO_ENABLED=0 go build -o ../bin/grants-torrent ./cmd/server
+	cd $(BACKEND_DIR) && CGO_ENABLED=0 go build -o ../bin/ct-saas ./cmd/server
 
 build-frontend: ## Build frontend for production
 	cd $(FRONTEND_DIR) && npm run build

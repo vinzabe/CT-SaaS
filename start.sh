@@ -1,5 +1,5 @@
 #!/bin/bash
-# Grant's Torrent - One-liner start script
+# CT-SaaS - One-liner start script
 # Usage: ./start.sh [dev|prod]
 
 set -e
@@ -9,7 +9,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
 echo "======================================"
-echo "     Grant's Torrent - Starting..."
+echo "     CT-SaaS - Starting..."
 echo "======================================"
 
 if [ "$MODE" = "dev" ]; then
@@ -58,10 +58,10 @@ else
     # Workaround for docker-compose 1.29.2 ContainerConfig bug
     # Stop and remove any existing containers
     docker-compose down --remove-orphans 2>/dev/null || true
-    # Also force remove any containers with grants-torrent in name
-    docker ps -a --format "{{.Names}}" | grep -i grants-torrent | xargs -r docker rm -f 2>/dev/null || true
+    # Also force remove any containers with ct-saas in name
+    docker ps -a --format "{{.Names}}" | grep -i ct-saas | xargs -r docker rm -f 2>/dev/null || true
     # Remove the network to start fresh
-    docker network rm torrent_grants-torrent 2>/dev/null || true
+    docker network rm torrent_ct-saas 2>/dev/null || true
     
     echo "[2/3] Building images..."
     docker-compose build
@@ -75,7 +75,7 @@ else
     if curl -s http://localhost:7842/health > /dev/null 2>&1; then
         echo ""
         echo "======================================"
-        echo "  Grant's Torrent is running!"
+        echo "  CT-SaaS is running!"
         echo ""
         echo "  Frontend (HTTPS): https://localhost:7843"
         echo "  Frontend (HTTPS): https://localhost:7844"

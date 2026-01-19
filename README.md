@@ -1,4 +1,4 @@
-# Grant's Torrent
+# CT-SaaS
 
 A modern, secure SaaS platform for converting torrent and magnet links to direct HTTP downloads.
 
@@ -7,7 +7,7 @@ Built as a complete rewrite of [jpillora/cloud-torrent](https://github.com/jpill
 ## Quick Start
 
 ```bash
-# Start Grant's Torrent (one command)
+# Start CT-SaaS (one command)
 make up
 
 # Stop (preserves data)
@@ -27,8 +27,8 @@ make down
 
 | Account | Email | Password | Notes |
 |---------|-------|----------|-------|
-| **Admin** | `admin@grants.torrent` | `admin123` | Full access, admin panel |
-| **Demo** | `demo@grants.torrent` | `demo123` | Restricted, 24hr retention, can't change settings |
+| **Admin** | `admin@ct.saas` | `admin123` | Full access, admin panel |
+| **Demo** | `demo@ct.saas` | `demo123` | Restricted, 24hr retention, can't change settings |
 
 The demo account is perfect for testing - downloads are automatically deleted after 24 hours and account settings are locked.
 
@@ -41,9 +41,111 @@ The demo account is perfect for testing - downloads are automatically deleted af
 - **User Management**: Full authentication with JWT tokens and refresh token rotation
 - **Subscription Plans**: Free, Starter, Pro, and Unlimited tiers with usage quotas
 - **Admin Panel**: Manage users, view statistics, and monitor the platform
-- **Real-time Updates**: Live progress updates via polling
+- **Real-time Updates**: Live progress updates via Server-Sent Events (SSE)
 - **Streaming Support**: Direct streaming with Range request support
 - **Persistent Storage**: Database and downloads survive restarts
+
+## Recent Changes
+
+### v1.1.0 - SSE Real-Time Updates
+- **Server-Sent Events (SSE)**: Replaced polling with real-time push-based updates
+  - Live torrent progress without page refresh
+  - Connection status indicator (Live/Offline) in dashboard
+  - Auto-reconnect on connection drop
+  - Reduced server load (polling reduced from 3s to 30s fallback)
+- **SSE Endpoints**:
+  - `GET /api/v1/events` - User torrent updates (requires auth)
+  - `GET /api/v1/admin/events` - All torrent updates (admin only)
+- **Token-based SSE Auth**: Supports query parameter authentication for browser EventSource compatibility
+
+### v1.0.0 - Initial Release
+- Full torrent-to-HTTP conversion
+- User authentication with JWT
+- Admin panel
+- SSL/HTTPS support
+- Cloudflare Tunnel compatible
+- Demo account system
+
+## Security
+
+### Overview
+
+CT-SaaS implements multiple layers of security to protect user data and ensure secure operations.
+
+### Authentication & Authorization
+
+| Feature | Implementation | Details |
+|---------|----------------|---------|
+| Password Hashing | Argon2id | OWASP-recommended, memory-hard algorithm |
+| Access Tokens | JWT (HS256) | 15-minute expiry, signed with secure secret |
+| Refresh Tokens | Secure random | 7-day expiry, SHA-256 hashed storage |
+| Token Rotation | Automatic | New refresh token on each use |
+| Rate Limiting | Per-user/IP | 100 requests per minute |
+
+### Transport Security
+
+| Feature | Implementation | Details |
+|---------|----------------|---------|
+| TLS Version | 1.2 / 1.3 | Modern protocols only |
+| HTTPS | Always-on | Both frontend ports encrypted |
+| HSTS | Enabled | Forces HTTPS connections |
+| Secure Ciphers | Modern suite | AES-GCM, ChaCha20-Poly1305 |
+| Certificate | Auto-generated | Self-signed for dev, supports custom certs |
+
+### Cryptographic Security
+
+| Feature | Algorithm | Standard |
+|---------|-----------|----------|
+| Password Hash | Argon2id | OWASP recommended |
+| JWT Signing | HMAC-SHA256 | RFC 7519 |
+| Post-Quantum | ML-DSA-65 | NIST FIPS 204 |
+| Download Tokens | Secure Random | 256-bit entropy |
+| Refresh Tokens | SHA-256 | Hashed storage |
+
+### Post-Quantum Cryptography
+
+CT-SaaS includes optional post-quantum cryptographic support using NIST-approved algorithms:
+
+- **ML-DSA-65** (Module-Lattice Digital Signature Algorithm): Used for API request signing
+- **Security Level**: NIST Level 3 (equivalent to AES-192)
+- **Implementation**: Cloudflare's CIRCL library
+
+This provides protection against future quantum computer attacks while maintaining compatibility with current systems.
+
+### Application Security
+
+| Protection | Description |
+|------------|-------------|
+| Path Traversal | All file paths validated against download directory |
+| SQL Injection | Parameterized queries via pgx |
+| XSS | React's built-in escaping + CSP headers |
+| CSRF | Token-based authentication |
+| Token Expiry | Download links expire in 24 hours |
+| Download Limits | Max 10 downloads per token |
+| File Validation | .torrent extension required for uploads |
+
+### Secure Headers
+
+All responses include security headers:
+```
+X-Content-Type-Options: nosniff
+X-Frame-Options: DENY
+X-XSS-Protection: 1; mode=block
+Referrer-Policy: strict-origin-when-cross-origin
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+```
+
+### Security Best Practices
+
+1. **Change Default Credentials**: Update demo/admin passwords in production
+2. **Set JWT_SECRET**: Use a secure, random 64+ character secret
+3. **Use Real Certificates**: Replace self-signed certs with Let's Encrypt or similar
+4. **Firewall Rules**: Only expose ports 7843/7844, keep 7842 internal
+5. **Regular Updates**: Keep dependencies updated for security patches
+
+### Reporting Security Issues
+
+If you discover a security vulnerability, please report it responsibly by opening a private issue or contacting the maintainers directly. Do not disclose security issues publicly until a fix is available.
 
 ## Tech Stack
 
@@ -54,6 +156,7 @@ The demo account is perfect for testing - downloads are automatically deleted af
 - **Database**: PostgreSQL 16
 - **Cache**: Redis 7
 - **Auth**: JWT with Argon2id password hashing
+- **Real-time**: Server-Sent Events (SSE)
 
 ### Frontend
 - **Framework**: React 18 with TypeScript
@@ -61,6 +164,7 @@ The demo account is perfect for testing - downloads are automatically deleted af
 - **Styling**: Tailwind CSS
 - **State Management**: Zustand + TanStack Query
 - **UI Components**: Custom components with Lucide icons
+- **Real-time**: EventSource API for SSE
 
 ## Ports
 
@@ -75,7 +179,7 @@ The demo account is perfect for testing - downloads are automatically deleted af
 
 ## SSL/HTTPS Configuration
 
-Grant's Torrent has SSL enabled by default on both frontend ports.
+CT-SaaS has SSL enabled by default on both frontend ports.
 
 ### Self-Signed Certificates (Default)
 Self-signed certificates are generated automatically during container build. These work for:
@@ -111,7 +215,7 @@ make down && make up
 
 ## Cloudflare Tunnel Setup
 
-Grant's Torrent is designed to work with Cloudflare Tunnels for secure public access.
+CT-SaaS is designed to work with Cloudflare Tunnels for secure public access.
 
 ### Recommended: HTTPS Origin
 For end-to-end encryption with Cloudflare tunnel:
@@ -130,12 +234,12 @@ The `--no-tls-verify` flag is needed for self-signed certificates.
 
 1. Create tunnel:
 ```bash
-cloudflared tunnel create grants-torrent
+cloudflared tunnel create ct-saas
 ```
 
 2. Create config file (`~/.cloudflared/config.yml`):
 ```yaml
-tunnel: grants-torrent
+tunnel: ct-saas
 credentials-file: /root/.cloudflared/<tunnel-id>.json
 
 ingress:
@@ -148,12 +252,12 @@ ingress:
 
 3. Route DNS:
 ```bash
-cloudflared tunnel route dns grants-torrent torrent.yourdomain.com
+cloudflared tunnel route dns ct-saas torrent.yourdomain.com
 ```
 
 4. Run tunnel:
 ```bash
-cloudflared tunnel run grants-torrent
+cloudflared tunnel run ct-saas
 ```
 
 ### With Custom Certificates
@@ -170,10 +274,10 @@ ingress:
 
 | Container | Image | Purpose |
 |-----------|-------|---------|
-| `grants-torrent-web` | nginx:alpine | Frontend server (HTTPS) |
-| `grants-torrent-api` | custom | Go backend |
-| `grants-torrent-postgres` | postgres:16-alpine | Database |
-| `grants-torrent-redis` | redis:7-alpine | Cache |
+| `ct-saas-web` | nginx:alpine | Frontend server (HTTPS) |
+| `ct-saas-api` | custom | Go backend |
+| `ct-saas-postgres` | postgres:16-alpine | Database |
+| `ct-saas-redis` | redis:7-alpine | Cache |
 
 ## Persistent Volumes
 
@@ -231,6 +335,16 @@ Development URLs:
 - `POST /api/v1/torrents/:id/resume` - Resume download
 - `POST /api/v1/torrents/:id/token` - Generate download token
 
+### Real-time Events (SSE)
+- `GET /api/v1/events?token=<jwt>` - Subscribe to torrent updates
+- `GET /api/v1/admin/events?token=<jwt>` - Subscribe to all updates (admin)
+
+SSE events:
+- `connected` - Connection established
+- `torrents` - Torrent status updates (progress, speed, peers)
+- `heartbeat` - Keep-alive signal (every second)
+- `timeout` - Connection timeout (reconnect required)
+
 ### Downloads
 - `GET /api/v1/download/:token` - Download file (public, token-authenticated)
 
@@ -253,18 +367,6 @@ Development URLs:
 | Pro | $15/mo | 500 GB/mo | 10 | 30 days |
 | Unlimited | $30/mo | Unlimited | 25 | 90 days |
 
-## Security Features
-
-- **SSL/TLS Always On**: HTTPS enabled on all frontend ports
-- **TLS 1.2/1.3**: Modern SSL configuration with secure ciphers
-- **HSTS**: HTTP Strict Transport Security enabled
-- **Argon2id**: OWASP-recommended password hashing
-- **JWT with Rotation**: Short-lived access tokens (15 min) with refresh token rotation
-- **Post-Quantum Cryptography**: ML-DSA-65 signatures for API security
-- **Rate Limiting**: Per-user and per-IP rate limiting
-- **Path Traversal Protection**: Secure file serving
-- **Token-based Downloads**: Secure, expiring download links
-
 ## Environment Variables
 
 | Variable | Description | Default |
@@ -282,20 +384,21 @@ Development URLs:
 ## Project Structure
 
 ```
-grants-torrent/
+ct-saas/
 ├── backend/
 │   ├── cmd/server/         # Application entry point
 │   └── internal/
-│       ├── auth/           # Authentication & JWT
+│       ├── auth/           # Authentication & JWT & PQC
 │       ├── config/         # Configuration
 │       ├── database/       # PostgreSQL layer
-│       ├── handlers/       # HTTP handlers
+│       ├── handlers/       # HTTP handlers (incl. SSE)
 │       ├── middleware/     # HTTP middleware
 │       ├── models/         # Data models
 │       └── torrent/        # Torrent engine & ZIP utility
 ├── frontend/
 │   └── src/
 │       ├── components/     # React components
+│       ├── hooks/          # Custom hooks (incl. useSSE)
 │       ├── lib/            # API client & store
 │       ├── pages/          # Page components
 │       └── types/          # TypeScript types
@@ -351,16 +454,22 @@ Make sure to use `--no-tls-verify` with self-signed certificates:
 cloudflared tunnel --url https://localhost:7844 --no-tls-verify
 ```
 
+### SSE not connecting
+- Check if you're authenticated (valid JWT token)
+- Check browser console for connection errors
+- Verify the API is accessible at `/api/v1/events`
+- Check for proxy/firewall blocking long-lived connections
+
 ### View logs
 ```bash
-docker logs grants-torrent-api
-docker logs grants-torrent-web
+docker logs ct-saas-api
+docker logs ct-saas-web
 ```
 
 ### Database issues
 ```bash
 # Connect to database
-docker exec -it grants-torrent-postgres psql -U grantstorrent -d grantstorrent
+docker exec -it ct-saas-postgres psql -U grantstorrent -d grantstorrent
 ```
 
 ## License
@@ -374,3 +483,4 @@ This project is licensed under the AGPL-3.0 License - see the LICENSE file for d
 - [Fiber](https://gofiber.io/) - Fast Go web framework
 - [Tailwind CSS](https://tailwindcss.com/) - Utility-first CSS framework
 - [Cloudflare](https://cloudflare.com/) - Tunnel and security services
+- [CIRCL](https://github.com/cloudflare/circl) - Post-quantum cryptography library

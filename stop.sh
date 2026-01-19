@@ -1,5 +1,5 @@
 #!/bin/bash
-# Grant's Torrent - One-liner stop script
+# CT-SaaS - One-liner stop script
 # Usage: ./stop.sh [dev|prod|all|clean]
 
 set -e
@@ -9,7 +9,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
 echo "======================================"
-echo "     Grant's Torrent - Stopping..."
+echo "     CT-SaaS - Stopping..."
 echo "======================================"
 
 case "$MODE" in
@@ -34,7 +34,7 @@ case "$MODE" in
 esac
 
 echo ""
-echo "Grant's Torrent stopped."
+echo "CT-SaaS stopped."
 if [ "$MODE" != "clean" ]; then
     echo "Data volumes preserved. Use './stop.sh clean' to remove all data."
 fi

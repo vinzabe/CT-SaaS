@@ -57,7 +57,7 @@ func NewPQAuthService(expiryMinutes int) (*PQAuthService, error) {
 			PublicKey:  pub,
 			PrivateKey: priv,
 		},
-		issuer:    "grants-torrent",
+		issuer:    "ct-saas",
 		expiryMin: expiryMinutes,
 	}, nil
 }
