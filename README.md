@@ -4,6 +4,43 @@ A modern, secure SaaS platform for converting torrent and magnet links to direct
 
 Built as a complete rewrite of [jpillora/cloud-torrent](https://github.com/jpillora/cloud-torrent) with modern architecture, full SaaS features, and post-quantum cryptographic security.
 
+[![Live Demo](https://img.shields.io/badge/demo-live-brightgreen?style=for-the-badge)](https://torrent.abejar.net)
+[![License](https://img.shields.io/badge/license-AGPL--3.0-blue?style=for-the-badge)](LICENSE)
+
+## Live Demo
+
+**Try it now: [https://torrent.abejar.net](https://torrent.abejar.net)**
+
+| Account | Email | Password |
+|---------|-------|----------|
+| Demo | `demo@ct.saas` | `demo123` |
+
+## Screenshots
+
+<p align="center">
+  <img src="screenshots/dashboard.png" alt="CT-SaaS Dashboard" width="800">
+</p>
+
+<details>
+<summary>More Screenshots</summary>
+
+### Landing Page
+<p align="center">
+  <img src="screenshots/landing.png" alt="Landing Page" width="800">
+</p>
+
+### Admin Panel
+<p align="center">
+  <img src="screenshots/admin.png" alt="Admin Panel" width="800">
+</p>
+
+### Add Torrent
+<p align="center">
+  <img src="screenshots/add-torrent.png" alt="Add Torrent Modal" width="600">
+</p>
+
+</details>
+
 ## Quick Start
 
 ```bash
@@ -29,6 +66,8 @@ make down
 |---------|-------|----------|-------|
 | **Admin** | `admin@ct.saas` | `admin123` | Full access, admin panel |
 | **Demo** | `demo@ct.saas` | `demo123` | Restricted, 24hr retention, can't change settings |
+
+> **Try the live demo:** [https://torrent.abejar.net](https://torrent.abejar.net)
 
 The demo account is perfect for testing - downloads are automatically deleted after 24 hours and account settings are locked.
 
