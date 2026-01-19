@@ -22,7 +22,7 @@ We take security seriously at CT-SaaS. If you discover a security vulnerability,
 
 ### Do
 
-1. **Email us directly** at security@ct-saas.example (or open a private security advisory on GitHub)
+1. **Email us directly** at security@abejar.net (or open a private security advisory on GitHub)
 2. **Provide details** including:
    - Description of the vulnerability
    - Steps to reproduce
