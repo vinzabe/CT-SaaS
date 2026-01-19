@@ -37,6 +37,7 @@ services:
     restart: unless-stopped
     ports:
       - "7843:7843"
+      - "7844:7844"
     depends_on:
       - api
     networks:

@@ -18,41 +18,81 @@ api.interceptors.request.use((config) => {
   return config
 })
 
+// Track if we're currently refreshing to avoid multiple refresh attempts
+let isRefreshing = false
+let failedQueue: Array<{ resolve: (token: string) => void; reject: (error: unknown) => void }> = []
+
+const processQueue = (error: unknown, token: string | null = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error)
+    } else {
+      prom.resolve(token!)
+    }
+  })
+  failedQueue = []
+}
+
 // Response interceptor to handle token refresh
 api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError<ApiError>) => {
-    const originalRequest = error.config
+    const originalRequest = error.config as typeof error.config & { _retry?: boolean }
     
-    // Handle 401 errors
-    if (error.response?.status === 401) {
-      // If token expired, try to refresh
-      if (error.response?.data?.code === 'TOKEN_EXPIRED') {
-        try {
-          const refreshToken = useAuthStore.getState().refreshToken
-          if (refreshToken) {
-            const response = await axios.post<AuthResponse>('/api/v1/auth/refresh', {
-              refresh_token: refreshToken,
-            })
-            
-            useAuthStore.getState().setTokens(
-              response.data.access_token,
-              response.data.refresh_token
-            )
-            
-            if (originalRequest) {
-              originalRequest.headers.Authorization = `Bearer ${response.data.access_token}`
-              return api(originalRequest)
-            }
+    // Handle 401 errors - only if we have a token (user was logged in)
+    if (error.response?.status === 401 && useAuthStore.getState().accessToken) {
+      // Don't retry if we already tried
+      if (originalRequest?._retry) {
+        return Promise.reject(error)
+      }
+
+      // Try to refresh token
+      if (isRefreshing) {
+        // Queue this request while refresh is in progress
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject })
+        }).then((token) => {
+          if (originalRequest) {
+            originalRequest.headers.Authorization = `Bearer ${token}`
+            return api(originalRequest)
           }
-        } catch {
-          useAuthStore.getState().logout()
-          window.location.href = '/login'
+        })
+      }
+
+      originalRequest._retry = true
+      isRefreshing = true
+
+      try {
+        const refreshToken = useAuthStore.getState().refreshToken
+        if (refreshToken) {
+          const response = await axios.post<AuthResponse>('/api/v1/auth/refresh', {
+            refresh_token: refreshToken,
+          })
+          
+          const newToken = response.data.access_token
+          useAuthStore.getState().setTokens(newToken, response.data.refresh_token)
+          
+          processQueue(null, newToken)
+          
+          if (originalRequest) {
+            originalRequest.headers.Authorization = `Bearer ${newToken}`
+            return api(originalRequest)
+          }
+        } else {
+          throw new Error('No refresh token')
         }
-      } else {
-        // For any other 401 (missing header, invalid token), logout and redirect
-        useAuthStore.getState().logout()
-        window.location.href = '/login'
+      } catch (refreshError) {
+        processQueue(refreshError, null)
+        // Only logout if refresh actually failed, and only if on a protected page
+        if (window.location.pathname.startsWith('/dashboard') || 
+            window.location.pathname.startsWith('/admin')) {
+          useAuthStore.getState().logout()
+          // Use replace to avoid adding to history
+          window.location.replace('/login')
+        }
+        return Promise.reject(refreshError)
+      } finally {
+        isRefreshing = false
       }
     }
     

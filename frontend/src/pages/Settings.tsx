@@ -59,6 +59,15 @@ export function SettingsPage() {
         {/* Account Tab */}
         {activeTab === 'account' && (
           <div className="card p-6 space-y-6">
+            {user?.role === 'demo' && (
+              <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <p className="text-sm font-medium text-yellow-800">Demo Account</p>
+                <p className="text-xs text-yellow-600 mt-1">
+                  This is a demo account. Downloads are automatically deleted after 24 hours.
+                  Account settings cannot be changed.
+                </p>
+              </div>
+            )}
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Account Information</h3>
               <div className="space-y-4">
@@ -75,7 +84,7 @@ export function SettingsPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
                   <input
                     type="text"
-                    value={user?.role || 'user'}
+                    value={user?.role === 'demo' ? 'Demo User' : (user?.role || 'user')}
                     disabled
                     className="input bg-gray-50 cursor-not-allowed capitalize"
                   />

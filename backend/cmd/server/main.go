@@ -263,42 +263,58 @@ func processTorrentUpdates(db *database.Database, engine *torrent.Engine, cfg *c
 	}
 }
 
-// createDemoAdmin creates a demo admin account if it doesn't exist
+// createDemoAccounts creates demo admin and demo user accounts if they don't exist
 func createDemoAdmin(db *database.Database, authService *auth.AuthService) {
 	ctx := context.Background()
 	
-	// Check if admin exists
+	// Create admin account
 	admin, err := db.GetUserByEmail(ctx, "admin@grants.torrent")
 	if err != nil {
 		log.Printf("Error checking for admin user: %v", err)
-		return
-	}
-	
-	if admin != nil {
+	} else if admin == nil {
+		passwordHash, err := authService.HashPassword("admin123")
+		if err != nil {
+			log.Printf("Failed to hash admin password: %v", err)
+		} else {
+			user, err := db.CreateUser(ctx, "admin@grants.torrent", passwordHash)
+			if err != nil {
+				log.Printf("Failed to create admin user: %v", err)
+			} else {
+				if err := db.UpdateUserRole(ctx, user.ID, "admin"); err != nil {
+					log.Printf("Failed to set admin role: %v", err)
+				} else {
+					log.Println("Demo admin created: admin@grants.torrent / admin123")
+				}
+			}
+		}
+	} else {
 		log.Println("Demo admin already exists")
-		return
 	}
 	
-	// Create admin user with password "admin123"
-	passwordHash, err := authService.HashPassword("admin123")
+	// Create demo account (restricted - can't change password, 24hr retention)
+	demo, err := db.GetUserByEmail(ctx, "demo@grants.torrent")
 	if err != nil {
-		log.Printf("Failed to hash admin password: %v", err)
-		return
+		log.Printf("Error checking for demo user: %v", err)
+	} else if demo == nil {
+		passwordHash, err := authService.HashPassword("demo123")
+		if err != nil {
+			log.Printf("Failed to hash demo password: %v", err)
+		} else {
+			user, err := db.CreateUser(ctx, "demo@grants.torrent", passwordHash)
+			if err != nil {
+				log.Printf("Failed to create demo user: %v", err)
+			} else {
+				// Set demo role (restricted user)
+				if err := db.UpdateUserRole(ctx, user.ID, "demo"); err != nil {
+					log.Printf("Failed to set demo role: %v", err)
+				} else {
+					log.Println("Demo user created: demo@grants.torrent / demo123")
+				}
+			}
+		}
+	} else {
+		log.Println("Demo user already exists")
 	}
-	
-	user, err := db.CreateUser(ctx, "admin@grants.torrent", passwordHash)
-	if err != nil {
-		log.Printf("Failed to create admin user: %v", err)
-		return
-	}
-	
-	// Set admin role
-	if err := db.UpdateUserRole(ctx, user.ID, "admin"); err != nil {
-		log.Printf("Failed to set admin role: %v", err)
-		return
-	}
-	
-	log.Println("Demo admin created: admin@grants.torrent / admin123")
 }
 
 // reloadActiveTorrents loads active torrents from database into engine

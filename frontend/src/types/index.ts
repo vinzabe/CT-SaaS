@@ -1,7 +1,7 @@
 export interface User {
   id: string
   email: string
-  role: 'user' | 'premium' | 'admin'
+  role: 'user' | 'premium' | 'admin' | 'demo'
   created_at: string
   updated_at: string
 }

@@ -111,6 +111,12 @@ export function LandingPage() {
               Sign in
             </Link>
           </div>
+          <div className="mt-6 p-4 bg-gray-100 rounded-lg inline-block">
+            <p className="text-sm text-gray-600">
+              <span className="font-medium">Try the demo:</span>{' '}
+              <code className="bg-gray-200 px-2 py-0.5 rounded">demo@grants.torrent</code> / <code className="bg-gray-200 px-2 py-0.5 rounded">demo123</code>
+            </p>
+          </div>
         </div>
       </section>
 

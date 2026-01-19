@@ -164,6 +164,12 @@ export function Layout({ children }: LayoutProps) {
 
       {/* Main content */}
       <div className="lg:pl-64">
+        {/* Demo banner */}
+        {user?.role === 'demo' && (
+          <div className="bg-yellow-500 text-yellow-900 text-center py-2 px-4 text-sm font-medium">
+            Demo Account - Downloads are deleted after 24 hours. Create an account for full access.
+          </div>
+        )}
         {/* Top bar */}
         <div className="sticky top-0 z-30 h-16 bg-white border-b border-gray-200 lg:hidden">
           <div className="flex items-center justify-between h-full px-4">
