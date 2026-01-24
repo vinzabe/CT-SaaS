@@ -1,6 +1,9 @@
 package config
 
 import (
+	"crypto/rand"
+	"encoding/hex"
+	"log"
 	"os"
 	"strconv"
 )
@@ -42,7 +45,7 @@ func Load() *Config {
 		Environment:       getEnv("ENVIRONMENT", "development"),
 		DatabaseURL:       getEnv("DATABASE_URL", "postgres://postgres:postgres@localhost:5433/freetorrent?sslmode=disable"),
 		RedisURL:          getEnv("REDIS_URL", "redis://localhost:6380"),
-		JWTSecret:         getEnv("JWT_SECRET", "your-super-secret-key-change-in-production"),
+		JWTSecret:         getJWTSecret(),
 		JWTAccessExpiry:   getEnvInt("JWT_ACCESS_EXPIRY", 15),
 		JWTRefreshExpiry:  getEnvInt("JWT_REFRESH_EXPIRY", 7),
 		DownloadDir:       getEnv("DOWNLOAD_DIR", "./downloads"),
@@ -70,4 +73,29 @@ func getEnvInt(key string, defaultValue int) int {
 		}
 	}
 	return defaultValue
+}
+
+// getJWTSecret returns JWT secret from environment or generates a secure one for development
+func getJWTSecret() string {
+	if secret := os.Getenv("JWT_SECRET"); secret != "" {
+		return secret
+	}
+	
+	// In production, require JWT_SECRET to be set
+	if os.Getenv("ENVIRONMENT") == "production" {
+		log.Fatal("FATAL: JWT_SECRET environment variable is required in production")
+	}
+	
+	// For development, generate a random key and warn
+	log.Println("WARNING: JWT_SECRET not set. Generating random key for development. Sessions will not persist across restarts.")
+	return generateSecureKey(32)
+}
+
+// generateSecureKey generates a cryptographically secure random key
+func generateSecureKey(length int) string {
+	bytes := make([]byte, length)
+	if _, err := rand.Read(bytes); err != nil {
+		log.Fatal("Failed to generate secure key:", err)
+	}
+	return hex.EncodeToString(bytes)
 }

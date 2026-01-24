@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"log"
 	"os"
 	"os/signal"
@@ -264,26 +266,49 @@ func processTorrentUpdates(db *database.Database, engine *torrent.Engine, cfg *c
 }
 
 // createDemoAccounts creates demo admin and demo user accounts if they don't exist
+// Credentials are read from environment variables for security
 func createDemoAdmin(db *database.Database, authService *auth.AuthService) {
 	ctx := context.Background()
 	
+	// Get credentials from environment or use secure defaults for development only
+	adminEmail := getEnvOrDefault("DEMO_ADMIN_EMAIL", "admin@ct.saas")
+	adminPassword := getEnvOrDefault("DEMO_ADMIN_PASSWORD", "")
+	demoEmail := getEnvOrDefault("DEMO_USER_EMAIL", "demo@ct.saas")
+	demoPassword := getEnvOrDefault("DEMO_USER_PASSWORD", "")
+	
+	// Skip demo account creation if passwords are not set in production
+	if os.Getenv("ENVIRONMENT") == "production" && (adminPassword == "" || demoPassword == "") {
+		log.Println("Demo accounts disabled in production (set DEMO_ADMIN_PASSWORD and DEMO_USER_PASSWORD to enable)")
+		return
+	}
+	
+	// For development, generate secure random passwords if not set
+	if adminPassword == "" {
+		adminPassword = generateRandomPassword()
+		log.Printf("Generated admin password for development: %s", adminPassword)
+	}
+	if demoPassword == "" {
+		demoPassword = generateRandomPassword()
+		log.Printf("Generated demo password for development: %s", demoPassword)
+	}
+	
 	// Create admin account
-	admin, err := db.GetUserByEmail(ctx, "admin@ct.saas")
+	admin, err := db.GetUserByEmail(ctx, adminEmail)
 	if err != nil {
 		log.Printf("Error checking for admin user: %v", err)
 	} else if admin == nil {
-		passwordHash, err := authService.HashPassword("admin123")
+		passwordHash, err := authService.HashPassword(adminPassword)
 		if err != nil {
 			log.Printf("Failed to hash admin password: %v", err)
 		} else {
-			user, err := db.CreateUser(ctx, "admin@ct.saas", passwordHash)
+			user, err := db.CreateUser(ctx, adminEmail, passwordHash)
 			if err != nil {
 				log.Printf("Failed to create admin user: %v", err)
 			} else {
 				if err := db.UpdateUserRole(ctx, user.ID, "admin"); err != nil {
 					log.Printf("Failed to set admin role: %v", err)
 				} else {
-					log.Println("Demo admin created: admin@ct.saas / admin123")
+					log.Printf("Demo admin created: %s", adminEmail)
 				}
 			}
 		}
@@ -292,15 +317,15 @@ func createDemoAdmin(db *database.Database, authService *auth.AuthService) {
 	}
 	
 	// Create demo account (restricted - can't change password, 24hr retention)
-	demo, err := db.GetUserByEmail(ctx, "demo@ct.saas")
+	demo, err := db.GetUserByEmail(ctx, demoEmail)
 	if err != nil {
 		log.Printf("Error checking for demo user: %v", err)
 	} else if demo == nil {
-		passwordHash, err := authService.HashPassword("demo123")
+		passwordHash, err := authService.HashPassword(demoPassword)
 		if err != nil {
 			log.Printf("Failed to hash demo password: %v", err)
 		} else {
-			user, err := db.CreateUser(ctx, "demo@ct.saas", passwordHash)
+			user, err := db.CreateUser(ctx, demoEmail, passwordHash)
 			if err != nil {
 				log.Printf("Failed to create demo user: %v", err)
 			} else {
@@ -308,13 +333,30 @@ func createDemoAdmin(db *database.Database, authService *auth.AuthService) {
 				if err := db.UpdateUserRole(ctx, user.ID, "demo"); err != nil {
 					log.Printf("Failed to set demo role: %v", err)
 				} else {
-					log.Println("Demo user created: demo@ct.saas / demo123")
+					log.Printf("Demo user created: %s", demoEmail)
 				}
 			}
 		}
 	} else {
 		log.Println("Demo user already exists")
 	}
+}
+
+// getEnvOrDefault returns the environment variable value or a default
+func getEnvOrDefault(key, defaultVal string) string {
+	if val := os.Getenv(key); val != "" {
+		return val
+	}
+	return defaultVal
+}
+
+// generateRandomPassword generates a secure random password
+func generateRandomPassword() string {
+	bytes := make([]byte, 16)
+	if _, err := rand.Read(bytes); err != nil {
+		return "change-me-immediately"
+	}
+	return hex.EncodeToString(bytes)
 }
 
 // reloadActiveTorrents loads active torrents from database into engine
