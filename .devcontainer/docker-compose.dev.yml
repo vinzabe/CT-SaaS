@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  devcontainer:
+    image: mcr.microsoft.com/devcontainers/go:1-1.22-bookworm
+    volumes:
+      - ..:/workspace:cached
+      - downloads:/downloads
+    command: sleep infinity
+    environment:
+      - PORT=7842
+      - ENVIRONMENT=development
+      - DATABASE_URL=postgres://grantstorrent:grantstorrent@postgres:5432/grantstorrent?sslmode=disable
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=dev-secret-change-in-production
+      - DOWNLOAD_DIR=/downloads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - ct-saas
+
+volumes:
+  downloads:

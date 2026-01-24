@@ -1,0 +1,55 @@
+{
+  "name": "CT-SaaS Development",
+  "dockerComposeFile": ["../docker-compose.yml", "docker-compose.dev.yml"],
+  "service": "devcontainer",
+  "workspaceFolder": "/workspace",
+  "features": {
+    "ghcr.io/devcontainers/features/go:1": {
+      "version": "1.22"
+    },
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "20"
+    },
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "golang.go",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "bradlc.vscode-tailwindcss",
+        "ms-azuretools.vscode-docker",
+        "eamodio.gitlens",
+        "usernamehw.errorlens",
+        "PKief.material-icon-theme"
+      ],
+      "settings": {
+        "go.useLanguageServer": true,
+        "go.lintTool": "golangci-lint",
+        "editor.formatOnSave": true,
+        "[go]": {
+          "editor.defaultFormatter": "golang.go"
+        },
+        "[typescript]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode"
+        },
+        "[typescriptreact]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode"
+        }
+      }
+    }
+  },
+  "forwardPorts": [7842, 7843, 7844, 5432, 6379],
+  "portsAttributes": {
+    "7842": { "label": "API Server", "onAutoForward": "notify" },
+    "7843": { "label": "Web UI (HTTP)", "onAutoForward": "openBrowser" },
+    "7844": { "label": "Web UI (HTTPS)", "onAutoForward": "ignore" },
+    "5432": { "label": "PostgreSQL", "onAutoForward": "ignore" },
+    "6379": { "label": "Redis", "onAutoForward": "ignore" }
+  },
+  "postCreateCommand": "cd frontend && npm install && cd ../backend && go mod download",
+  "postStartCommand": "echo 'CT-SaaS dev environment ready! Run make dev to start.'",
+  "remoteUser": "vscode"
+}
