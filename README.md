@@ -1,19 +1,184 @@
-# CT-SaaS
+<p align="center">
+  <!-- Replace with your actual logo -->
+  <img src="docs/screenshots/logo-placeholder.png" alt="CT-SaaS Logo" width="200" height="200">
+</p>
 
-A modern, secure SaaS platform for converting torrent and magnet links to direct HTTP downloads.
+<h1 align="center">CT-SaaS</h1>
+
+<p align="center">
+  <strong>A modern, secure SaaS platform for converting torrent and magnet links to direct HTTP downloads.</strong>
+</p>
+
+<p align="center">
+  <a href="https://github.com/vinzabe/CT-SaaS/actions/workflows/ci.yml"><img src="https://github.com/vinzabe/CT-SaaS/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/vinzabe/CT-SaaS/actions/workflows/docker.yml"><img src="https://github.com/vinzabe/CT-SaaS/actions/workflows/docker.yml/badge.svg" alt="Docker Build"></a>
+  <img src="https://img.shields.io/badge/Go-1.22+-00ADD8?logo=go&logoColor=white" alt="Go Version">
+  <img src="https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker&logoColor=white" alt="Docker">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPL--3.0-blue" alt="License"></a>
+</p>
+
+<p align="center">
+  <a href="https://torrent.abejar.net"><img src="https://img.shields.io/badge/demo-live-brightgreen?style=for-the-badge" alt="Live Demo"></a>
+</p>
+
+---
 
 Built as a complete rewrite of [jpillora/cloud-torrent](https://github.com/jpillora/cloud-torrent) with modern architecture, full SaaS features, and post-quantum cryptographic security.
 
-[![Live Demo](https://img.shields.io/badge/demo-live-brightgreen?style=for-the-badge)](https://torrent.abejar.net)
-[![License](https://img.shields.io/badge/license-AGPL--3.0-blue?style=for-the-badge)](LICENSE)
+## Feature Highlights
 
-## Live Demo
+- :zap: **Instant Conversion** - Transform torrents and magnet links to direct HTTP downloads
+- :package: **Auto-ZIP** - Multi-file torrents automatically packaged for easy download
+- :lock: **SSL/HTTPS Always On** - Both frontend ports secured with TLS 1.2/1.3
+- :shield: **Post-Quantum Security** - Future-proof encryption using NIST-approved ML-DSA-65
+- :busts_in_silhouette: **User Management** - Full auth with JWT tokens and refresh rotation
+- :credit_card: **Subscription Plans** - Free, Starter, Pro, and Unlimited tiers
+- :bar_chart: **Admin Panel** - Manage users, view stats, and monitor the platform
+- :satellite: **Real-time Updates** - Live progress via Server-Sent Events (SSE)
+- :arrow_forward: **Streaming Support** - Direct streaming with Range request support
+- :floppy_disk: **Persistent Storage** - Database and downloads survive restarts
 
-**Try it now: [https://torrent.abejar.net](https://torrent.abejar.net)**
+## Architecture
 
-| Account | Email | Password |
-|---------|-------|----------|
-| Demo | `demo@ct.saas` | `demo123` |
+```
+                                    +-----------------+
+                                    |   Web Browser   |
+                                    +--------+--------+
+                                             |
+                                    HTTPS (7843/7844)
+                                             |
++------------------------------------------------------------------------------------+
+|                                    Docker Network                                   |
+|                                                                                    |
+|  +------------------+        +------------------+        +------------------+      |
+|  |                  |        |                  |        |                  |      |
+|  |   Nginx (web)    +------->+   Go API (api)   +------->+   PostgreSQL     |      |
+|  |   :7843/:7844    |  HTTP  |      :7842       |        |   (postgres)     |      |
+|  |                  |        |                  |        |                  |      |
+|  +------------------+        +--------+---------+        +------------------+      |
+|                                       |                                            |
+|                                       |                  +------------------+      |
+|                                       +----------------->+     Redis        |      |
+|                                                          |    (redis)       |      |
+|                                                          +------------------+      |
+|                                                                                    |
+|  +------------------+                                                              |
+|  |  Torrent Engine  |  BitTorrent Protocol (TCP/UDP :42069)                       |
+|  |  (anacrolix)     +<----------------------------------------------------------+ |
+|  +------------------+                                                              |
++------------------------------------------------------------------------------------+
+```
+
+```mermaid
+graph TB
+    subgraph Client
+        Browser[Web Browser]
+    end
+    
+    subgraph "Docker Compose Stack"
+        Nginx[Nginx<br/>:7843/:7844 HTTPS]
+        API[Go API<br/>:7842]
+        Torrent[Torrent Engine<br/>:42069]
+        PG[(PostgreSQL)]
+        Redis[(Redis)]
+    end
+    
+    Browser -->|HTTPS| Nginx
+    Nginx -->|HTTP| API
+    API --> PG
+    API --> Redis
+    API --> Torrent
+    Torrent -->|BitTorrent| Internet((Internet))
+```
+
+## Quick Start
+
+### Prerequisites
+- Docker & Docker Compose
+
+### One-Command Deployment
+
+```bash
+# Clone the repository
+git clone https://github.com/vinzabe/CT-SaaS.git
+cd CT-SaaS
+
+# Start CT-SaaS
+make up
+
+# Or using docker-compose directly
+docker-compose up -d
+```
+
+**Access (HTTPS enabled by default):**
+- Frontend: https://localhost:7843 or https://localhost:7844
+- API: http://localhost:7842
+
+> **Note:** Self-signed SSL certificates are generated automatically. Your browser will show a security warning - this is normal for self-signed certs.
+
+### Docker Compose Configuration
+
+```yaml
+# docker-compose.yml (simplified)
+version: '3.8'
+services:
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+    ports:
+      - "7842:7842"
+      - "42069:42069"
+    environment:
+      - DATABASE_URL=postgres://user:pass@postgres:5432/db
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=your-secret-here
+    depends_on:
+      - postgres
+      - redis
+
+  web:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.frontend
+    ports:
+      - "7843:7843"
+      - "7844:7844"
+    depends_on:
+      - api
+
+  postgres:
+    image: postgres:16-alpine
+
+  redis:
+    image: redis:7-alpine
+```
+
+### Common Commands
+
+```bash
+# Start production (Docker)
+make up
+
+# Stop all containers
+make down
+
+# Stop and wipe all data
+./stop.sh clean
+
+# View logs
+docker logs ct-saas-api
+docker logs ct-saas-web
+```
+
+## Demo Accounts
+
+| Account | Email | Password | Notes |
+|---------|-------|----------|-------|
+| **Admin** | `admin@ct.saas` | `admin123` | Full access, admin panel |
+| **Demo** | `demo@ct.saas` | `demo123` | Restricted, 24hr retention |
+
+> **Try the live demo:** [https://torrent.abejar.net](https://torrent.abejar.net)
 
 ## Screenshots
 
@@ -41,150 +206,88 @@ Built as a complete rewrite of [jpillora/cloud-torrent](https://github.com/jpill
 
 </details>
 
-## Quick Start
+## Environment Variables
 
-```bash
-# Start CT-SaaS (one command)
-make up
+| Variable | Description | Default | Required |
+|----------|-------------|---------|----------|
+| `PORT` | Backend server port | `7842` | No |
+| `ENVIRONMENT` | `development` or `production` | `production` | No |
+| `DATABASE_URL` | PostgreSQL connection string | Docker internal | Yes |
+| `REDIS_URL` | Redis connection string | Docker internal | Yes |
+| `JWT_SECRET` | JWT signing secret (64+ chars recommended) | Auto-generated | **Yes (prod)** |
+| `JWT_ACCESS_EXPIRY` | Access token expiry (minutes) | `15` | No |
+| `JWT_REFRESH_EXPIRY` | Refresh token expiry (days) | `7` | No |
+| `DOWNLOAD_DIR` | Torrent download directory | `/downloads` | No |
+| `TORRENT_PORT` | BitTorrent listen port | `42069` | No |
+| `MAX_CONCURRENT` | Max concurrent torrents | `10` | No |
+| `STRIPE_SECRET_KEY` | Stripe API key for payments | - | No |
+| `STRIPE_WEBHOOK_KEY` | Stripe webhook secret | - | No |
 
-# Stop (preserves data)
-make down
+## API Endpoints
 
-# Stop and wipe all data
-./stop.sh clean
-```
+### Authentication
 
-**Access (HTTPS enabled by default):**
-- Frontend: https://localhost:7843 or https://localhost:7844
-- API: http://localhost:7842
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/v1/auth/register` | Create new account |
+| `POST` | `/api/v1/auth/login` | Login and get tokens |
+| `POST` | `/api/v1/auth/refresh` | Refresh access token |
+| `POST` | `/api/v1/auth/logout` | Logout and invalidate tokens |
+| `GET` | `/api/v1/auth/me` | Get current user info |
 
-> Note: Self-signed SSL certificates are generated automatically. Your browser will show a security warning - this is normal for self-signed certs.
+### Torrents
 
-## Demo Accounts
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/v1/torrents` | Add torrent (magnet or URL) |
+| `POST` | `/api/v1/torrents/upload` | Upload .torrent file |
+| `GET` | `/api/v1/torrents` | List user's torrents |
+| `GET` | `/api/v1/torrents/:id` | Get torrent details |
+| `DELETE` | `/api/v1/torrents/:id` | Delete torrent |
+| `POST` | `/api/v1/torrents/:id/pause` | Pause download |
+| `POST` | `/api/v1/torrents/:id/resume` | Resume download |
+| `POST` | `/api/v1/torrents/:id/token` | Generate download token |
 
-| Account | Email | Password | Notes |
-|---------|-------|----------|-------|
-| **Admin** | `admin@ct.saas` | `admin123` | Full access, admin panel |
-| **Demo** | `demo@ct.saas` | `demo123` | Restricted, 24hr retention, can't change settings |
+### Real-time Events (SSE)
 
-> **Try the live demo:** [https://torrent.abejar.net](https://torrent.abejar.net)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/v1/events?token=<jwt>` | Subscribe to torrent updates |
+| `GET` | `/api/v1/admin/events?token=<jwt>` | Subscribe to all updates (admin) |
 
-The demo account is perfect for testing - downloads are automatically deleted after 24 hours and account settings are locked.
+**SSE Events:**
+- `connected` - Connection established
+- `torrents` - Torrent status updates (progress, speed, peers)
+- `heartbeat` - Keep-alive signal
+- `timeout` - Connection timeout
 
-## Features
+### Downloads
 
-- **Torrent to Direct Link**: Convert any torrent or magnet link to a streamable HTTP download
-- **Auto-ZIP**: Multi-file torrents are automatically zipped for easy download
-- **SSL/HTTPS Always On**: Both frontend ports use HTTPS with TLS 1.2/1.3
-- **Post-Quantum Security**: Future-proof encryption using NIST-approved ML-DSA-65 algorithms
-- **User Management**: Full authentication with JWT tokens and refresh token rotation
-- **Subscription Plans**: Free, Starter, Pro, and Unlimited tiers with usage quotas
-- **Admin Panel**: Manage users, view statistics, and monitor the platform
-- **Real-time Updates**: Live progress updates via Server-Sent Events (SSE)
-- **Streaming Support**: Direct streaming with Range request support
-- **Persistent Storage**: Database and downloads survive restarts
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/v1/download/:token` | Download file (token-authenticated) |
 
-## Recent Changes
+### Admin
 
-### v1.1.0 - SSE Real-Time Updates
-- **Server-Sent Events (SSE)**: Replaced polling with real-time push-based updates
-  - Live torrent progress without page refresh
-  - Connection status indicator (Live/Offline) in dashboard
-  - Auto-reconnect on connection drop
-  - Reduced server load (polling reduced from 3s to 30s fallback)
-- **SSE Endpoints**:
-  - `GET /api/v1/events` - User torrent updates (requires auth)
-  - `GET /api/v1/admin/events` - All torrent updates (admin only)
-- **Token-based SSE Auth**: Supports query parameter authentication for browser EventSource compatibility
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/v1/admin/users` | List all users |
+| `GET` | `/api/v1/admin/users/:id` | Get user details |
+| `PATCH` | `/api/v1/admin/users/:id` | Update user |
+| `DELETE` | `/api/v1/admin/users/:id` | Delete user |
+| `GET` | `/api/v1/admin/torrents` | List all torrents |
+| `DELETE` | `/api/v1/admin/torrents/:id` | Delete any torrent |
+| `GET` | `/api/v1/admin/stats` | Platform statistics |
+| `POST` | `/api/v1/admin/cleanup` | Cleanup expired torrents |
 
-### v1.0.0 - Initial Release
-- Full torrent-to-HTTP conversion
-- User authentication with JWT
-- Admin panel
-- SSL/HTTPS support
-- Cloudflare Tunnel compatible
-- Demo account system
+## Subscription Plans
 
-## Security
-
-### Overview
-
-CT-SaaS implements multiple layers of security to protect user data and ensure secure operations.
-
-### Authentication & Authorization
-
-| Feature | Implementation | Details |
-|---------|----------------|---------|
-| Password Hashing | Argon2id | OWASP-recommended, memory-hard algorithm |
-| Access Tokens | JWT (HS256) | 15-minute expiry, signed with secure secret |
-| Refresh Tokens | Secure random | 7-day expiry, SHA-256 hashed storage |
-| Token Rotation | Automatic | New refresh token on each use |
-| Rate Limiting | Per-user/IP | 100 requests per minute |
-
-### Transport Security
-
-| Feature | Implementation | Details |
-|---------|----------------|---------|
-| TLS Version | 1.2 / 1.3 | Modern protocols only |
-| HTTPS | Always-on | Both frontend ports encrypted |
-| HSTS | Enabled | Forces HTTPS connections |
-| Secure Ciphers | Modern suite | AES-GCM, ChaCha20-Poly1305 |
-| Certificate | Auto-generated | Self-signed for dev, supports custom certs |
-
-### Cryptographic Security
-
-| Feature | Algorithm | Standard |
-|---------|-----------|----------|
-| Password Hash | Argon2id | OWASP recommended |
-| JWT Signing | HMAC-SHA256 | RFC 7519 |
-| Post-Quantum | ML-DSA-65 | NIST FIPS 204 |
-| Download Tokens | Secure Random | 256-bit entropy |
-| Refresh Tokens | SHA-256 | Hashed storage |
-
-### Post-Quantum Cryptography
-
-CT-SaaS includes optional post-quantum cryptographic support using NIST-approved algorithms:
-
-- **ML-DSA-65** (Module-Lattice Digital Signature Algorithm): Used for API request signing
-- **Security Level**: NIST Level 3 (equivalent to AES-192)
-- **Implementation**: Cloudflare's CIRCL library
-
-This provides protection against future quantum computer attacks while maintaining compatibility with current systems.
-
-### Application Security
-
-| Protection | Description |
-|------------|-------------|
-| Path Traversal | All file paths validated against download directory |
-| SQL Injection | Parameterized queries via pgx |
-| XSS | React's built-in escaping + CSP headers |
-| CSRF | Token-based authentication |
-| Token Expiry | Download links expire in 24 hours |
-| Download Limits | Max 10 downloads per token |
-| File Validation | .torrent extension required for uploads |
-
-### Secure Headers
-
-All responses include security headers:
-```
-X-Content-Type-Options: nosniff
-X-Frame-Options: DENY
-X-XSS-Protection: 1; mode=block
-Referrer-Policy: strict-origin-when-cross-origin
-Strict-Transport-Security: max-age=31536000; includeSubDomains
-```
-
-### Security Best Practices
-
-1. **Change Default Credentials**: Update demo/admin passwords in production
-2. **Set JWT_SECRET**: Use a secure, random 64+ character secret
-3. **Use Real Certificates**: Replace self-signed certs with Let's Encrypt or similar
-4. **Firewall Rules**: Only expose ports 7843/7844, keep 7842 internal
-5. **Regular Updates**: Keep dependencies updated for security patches
-
-### Reporting Security Issues
-
-If you discover a security vulnerability, please report it responsibly by opening a private issue or contacting the maintainers directly. Do not disclose security issues publicly until a fix is available.
+| Plan | Price | Bandwidth | Concurrent | Retention |
+|------|-------|-----------|------------|-----------|
+| Free | $0/mo | 2 GB/mo | 1 | 24 hours |
+| Starter | $5/mo | 50 GB/mo | 3 | 7 days |
+| Pro | $15/mo | 500 GB/mo | 10 | 30 days |
+| Unlimited | $30/mo | Unlimited | 25 | 90 days |
 
 ## Tech Stack
 
@@ -203,139 +306,43 @@ If you discover a security vulnerability, please report it responsibly by openin
 - **Styling**: Tailwind CSS
 - **State Management**: Zustand + TanStack Query
 - **UI Components**: Custom components with Lucide icons
-- **Real-time**: EventSource API for SSE
 
-## Ports
+## Security
 
-| Service | Port | Protocol | Description |
-|---------|------|----------|-------------|
-| Frontend | 7843 | **HTTPS** | Web UI (SSL) |
-| Frontend | 7844 | **HTTPS** | Web UI (SSL) - Alternative |
-| Backend API | 7842 | HTTP | REST API (internal) |
-| BitTorrent | 42069 | TCP/UDP | Torrent protocol |
+CT-SaaS implements multiple layers of security:
 
-**Both frontend ports (7843 and 7844) use HTTPS/SSL by default.**
+| Feature | Implementation |
+|---------|----------------|
+| Password Hashing | Argon2id (OWASP recommended) |
+| Access Tokens | JWT with 15-minute expiry |
+| Refresh Tokens | Secure random, SHA-256 hashed |
+| Post-Quantum | ML-DSA-65 (NIST FIPS 204) |
+| TLS | 1.2/1.3 with modern ciphers |
+| Rate Limiting | 100 requests/minute per user |
 
-## SSL/HTTPS Configuration
+See [SECURITY.md](SECURITY.md) for full details.
 
-CT-SaaS has SSL enabled by default on both frontend ports.
+## Roadmap
 
-### Self-Signed Certificates (Default)
-Self-signed certificates are generated automatically during container build. These work for:
-- Local development
-- Cloudflare tunnels (with "No TLS Verify" option)
-- Internal networks
+- [ ] **Multi-language support** - i18n for UI
+- [ ] **Telegram bot integration** - Add torrents via Telegram
+- [ ] **WebTorrent support** - Browser-based seeding
+- [ ] **S3 storage backend** - Store downloads in cloud storage
+- [ ] **OAuth providers** - Login with Google, GitHub
+- [ ] **Mobile app** - React Native companion app
+- [ ] **API rate limiting tiers** - Per-plan API limits
+- [ ] **Webhook notifications** - Notify on torrent completion
+- [ ] **Torrent search** - Integrated search providers
+- [ ] **Bandwidth scheduling** - Time-based speed limits
 
-### Custom Certificates
-To use your own SSL certificates (e.g., from Let's Encrypt):
-
-1. Create a `certs` directory:
-```bash
-mkdir -p certs
-```
-
-2. Add your certificates:
-```bash
-cp your-certificate.crt certs/server.crt
-cp your-private-key.key certs/server.key
-```
-
-3. Add volume mount to `docker-compose.yml`:
-```yaml
-web:
-  volumes:
-    - ./certs:/etc/nginx/ssl:ro
-```
-
-4. Restart:
-```bash
-make down && make up
-```
-
-## Cloudflare Tunnel Setup
-
-CT-SaaS is designed to work with Cloudflare Tunnels for secure public access.
-
-### Recommended: HTTPS Origin
-For end-to-end encryption with Cloudflare tunnel:
-
-```bash
-# Quick tunnel (temporary)
-cloudflared tunnel --url https://localhost:7844 --no-tls-verify
-
-# Or use port 7843
-cloudflared tunnel --url https://localhost:7843 --no-tls-verify
-```
-
-The `--no-tls-verify` flag is needed for self-signed certificates.
-
-### Persistent Tunnel Configuration
-
-1. Create tunnel:
-```bash
-cloudflared tunnel create ct-saas
-```
-
-2. Create config file (`~/.cloudflared/config.yml`):
-```yaml
-tunnel: ct-saas
-credentials-file: /root/.cloudflared/<tunnel-id>.json
-
-ingress:
-  - hostname: torrent.yourdomain.com
-    service: https://localhost:7844
-    originRequest:
-      noTLSVerify: true
-  - service: http_status:404
-```
-
-3. Route DNS:
-```bash
-cloudflared tunnel route dns ct-saas torrent.yourdomain.com
-```
-
-4. Run tunnel:
-```bash
-cloudflared tunnel run ct-saas
-```
-
-### With Custom Certificates
-If using real certificates (not self-signed), remove `noTLSVerify`:
-
-```yaml
-ingress:
-  - hostname: torrent.yourdomain.com
-    service: https://localhost:7844
-  - service: http_status:404
-```
-
-## Docker Containers
-
-| Container | Image | Purpose |
-|-----------|-------|---------|
-| `ct-saas-web` | nginx:alpine | Frontend server (HTTPS) |
-| `ct-saas-api` | custom | Go backend |
-| `ct-saas-postgres` | postgres:16-alpine | Database |
-| `ct-saas-redis` | redis:7-alpine | Cache |
-
-## Persistent Volumes
-
-Data is stored in Docker volumes and survives restarts:
-
-| Volume | Purpose |
-|--------|---------|
-| `torrent_postgres_data` | PostgreSQL database |
-| `torrent_redis_data` | Redis cache |
-| `torrent_downloads` | Downloaded torrent files |
-
-## Development Setup
+## Development
 
 ### Prerequisites
 - Go 1.22+
 - Node.js 20+
 - Docker & Docker Compose
 
-### Development Mode
+### Local Development
 
 ```bash
 # Start development databases
@@ -352,73 +359,8 @@ make dev-frontend
 ```
 
 Development URLs:
-- Frontend: http://localhost:5173 (Vite dev server)
+- Frontend: http://localhost:5173
 - Backend API: http://localhost:7842
-
-## API Endpoints
-
-### Authentication
-- `POST /api/v1/auth/register` - Create account
-- `POST /api/v1/auth/login` - Login
-- `POST /api/v1/auth/refresh` - Refresh token
-- `POST /api/v1/auth/logout` - Logout
-- `GET /api/v1/auth/me` - Get current user
-
-### Torrents
-- `POST /api/v1/torrents` - Add torrent (magnet or URL)
-- `POST /api/v1/torrents/upload` - Upload .torrent file
-- `GET /api/v1/torrents` - List torrents
-- `GET /api/v1/torrents/:id` - Get torrent details
-- `DELETE /api/v1/torrents/:id` - Delete torrent
-- `POST /api/v1/torrents/:id/pause` - Pause download
-- `POST /api/v1/torrents/:id/resume` - Resume download
-- `POST /api/v1/torrents/:id/token` - Generate download token
-
-### Real-time Events (SSE)
-- `GET /api/v1/events?token=<jwt>` - Subscribe to torrent updates
-- `GET /api/v1/admin/events?token=<jwt>` - Subscribe to all updates (admin)
-
-SSE events:
-- `connected` - Connection established
-- `torrents` - Torrent status updates (progress, speed, peers)
-- `heartbeat` - Keep-alive signal (every second)
-- `timeout` - Connection timeout (reconnect required)
-
-### Downloads
-- `GET /api/v1/download/:token` - Download file (public, token-authenticated)
-
-### Admin
-- `GET /api/v1/admin/users` - List users
-- `GET /api/v1/admin/users/:id` - Get user details
-- `PATCH /api/v1/admin/users/:id` - Update user
-- `DELETE /api/v1/admin/users/:id` - Delete user
-- `GET /api/v1/admin/torrents` - List all torrents
-- `DELETE /api/v1/admin/torrents/:id` - Delete torrent
-- `GET /api/v1/admin/stats` - Platform statistics
-- `POST /api/v1/admin/cleanup` - Cleanup expired torrents
-
-## Subscription Plans
-
-| Plan | Price | Bandwidth | Concurrent | Retention |
-|------|-------|-----------|------------|-----------|
-| Free | $0/mo | 2 GB/mo | 1 | 24 hours |
-| Starter | $5/mo | 50 GB/mo | 3 | 7 days |
-| Pro | $15/mo | 500 GB/mo | 10 | 30 days |
-| Unlimited | $30/mo | Unlimited | 25 | 90 days |
-
-## Environment Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `PORT` | Backend server port | `7842` |
-| `ENVIRONMENT` | `development` or `production` | `production` |
-| `DATABASE_URL` | PostgreSQL connection string | Docker internal |
-| `REDIS_URL` | Redis connection string | Docker internal |
-| `JWT_SECRET` | JWT signing secret (auto-generated) | - |
-| `JWT_ACCESS_EXPIRY` | Access token expiry (minutes) | `15` |
-| `JWT_REFRESH_EXPIRY` | Refresh token expiry (days) | `7` |
-| `DOWNLOAD_DIR` | Torrent download directory | `/downloads` |
-| `TORRENT_PORT` | BitTorrent listen port | `42069` |
 
 ## Project Structure
 
@@ -445,6 +387,8 @@ ct-saas/
 │   ├── Dockerfile.backend
 │   ├── Dockerfile.frontend
 │   └── nginx.conf
+├── docs/
+│   └── screenshots/        # Documentation screenshots
 ├── docker-compose.yml
 ├── docker-compose.dev.yml
 ├── Makefile
@@ -452,68 +396,13 @@ ct-saas/
 └── stop.sh
 ```
 
-## Makefile Commands
+## Contributing
 
-| Command | Description |
-|---------|-------------|
-| `make up` | Start production (Docker) |
-| `make down` | Stop all containers |
-| `make dev` | Start development mode |
-| `make dev-db` | Start dev databases only |
-| `make dev-backend` | Run Go backend |
-| `make dev-frontend` | Run React frontend |
-| `make install` | Install all dependencies |
-| `make build` | Build for production |
-| `make test` | Run tests |
-| `make docker-logs` | View container logs |
-
-## Troubleshooting
-
-### Browser shows "Not Secure" warning
-This is normal with self-signed certificates. Click "Advanced" and "Proceed" to continue. For production, use real certificates.
-
-### Containers won't start
-```bash
-# Full cleanup and restart
-./stop.sh clean
-make up
-```
-
-### Port already in use
-Check if ports 7842, 7843, 7844, or 42069 are in use:
-```bash
-lsof -i :7842
-lsof -i :7843
-lsof -i :7844
-```
-
-### Cloudflare tunnel 502 error
-Make sure to use `--no-tls-verify` with self-signed certificates:
-```bash
-cloudflared tunnel --url https://localhost:7844 --no-tls-verify
-```
-
-### SSE not connecting
-- Check if you're authenticated (valid JWT token)
-- Check browser console for connection errors
-- Verify the API is accessible at `/api/v1/events`
-- Check for proxy/firewall blocking long-lived connections
-
-### View logs
-```bash
-docker logs ct-saas-api
-docker logs ct-saas-web
-```
-
-### Database issues
-```bash
-# Connect to database
-docker exec -it ct-saas-postgres psql -U grantstorrent -d grantstorrent
-```
+Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ## License
 
-This project is licensed under the AGPL-3.0 License - see the LICENSE file for details.
+This project is licensed under the AGPL-3.0 License - see the [LICENSE](LICENSE) file for details.
 
 ## Acknowledgments
 
@@ -521,5 +410,4 @@ This project is licensed under the AGPL-3.0 License - see the LICENSE file for d
 - [jpillora/cloud-torrent](https://github.com/jpillora/cloud-torrent) - Original inspiration
 - [Fiber](https://gofiber.io/) - Fast Go web framework
 - [Tailwind CSS](https://tailwindcss.com/) - Utility-first CSS framework
-- [Cloudflare](https://cloudflare.com/) - Tunnel and security services
-- [CIRCL](https://github.com/cloudflare/circl) - Post-quantum cryptography library
+- [Cloudflare CIRCL](https://github.com/cloudflare/circl) - Post-quantum cryptography library
