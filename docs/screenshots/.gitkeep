@@ -1,0 +1,8 @@
+# Screenshots Directory
+
+This directory is used for storing documentation screenshots.
+
+Add screenshots here and reference them in the documentation using:
+```markdown
+![Description](docs/screenshots/your-screenshot.png)
+```

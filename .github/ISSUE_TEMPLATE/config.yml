@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security Vulnerabilities
+    url: https://github.com/vinzabe/CT-SaaS/security/advisories/new
+    about: Report security vulnerabilities privately
+  - name: Live Demo
+    url: https://torrent.abejar.net
+    about: Try the live demo before reporting issues
+  - name: Documentation
+    url: https://github.com/vinzabe/CT-SaaS#readme
+    about: Check the README for setup and usage instructions

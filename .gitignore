@@ -1,0 +1,54 @@
+# Binaries
+bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Go
+backend/vendor/
+
+# Node.js
+frontend/node_modules/
+frontend/dist/
+frontend/.cache/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+backend/.env
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Downloads
+downloads/
+*.torrent
+cloud-torrent.json
+
+# Logs
+*.log
+logs/
+
+# Docker
+docker-compose.override.yml
+
+# Test
+coverage/
+*.cover
+*.out
+
+# Build
+tmp/
+dist/
+dev.sh
